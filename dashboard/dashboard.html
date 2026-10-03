@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Tra cứu giảng viên — Trợ lý Sinh viên</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <header>
+    <h1>Tra cứu giảng viên</h1>
+    <button id="btn-refresh" class="btn-header">Tải lại dữ liệu</button>
+  </header>
+
+  <div class="container">
+    <div class="left-panel">
+      <div class="filters">
+        <input type="text" id="teacher-search" placeholder="Tìm theo tên, mã GV..." autofocus>
+        <select id="filter-dept"><option value="">Tất cả khoa</option></select>
+      </div>
+      <div id="teacher-grid"></div>
+      <div id="pagination" class="pagination"></div>
+      <p id="status" class="status"></p>
+    </div>
+    <div class="right-panel" id="teacher-detail">
+      <div class="detail-empty">Chọn giảng viên để xem chi tiết</div>
+    </div>
+  </div>
+
+  <script src="../config.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>

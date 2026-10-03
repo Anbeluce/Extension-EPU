@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Trợ lý Sinh viên",
+  "version": "0.1.0",
+  "description": "Hỗ trợ sinh viên thao tác nhanh trên web sinh viên: xem thông tin, liên kết nhanh, đăng ký tín chỉ nhanh hơn.",
+  "permissions": ["storage", "activeTab", "scripting", "tabs", "cookies", "notifications"],
+  "icons": { "48": "icons/icon48.png" },
+  "host_permissions": ["*://*.epu.edu.vn/*", "https://*.workers.dev/*"],
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "scripts": ["config.js", "background/service-worker.js"]
+  },
+  "browser_specific_settings": {
+    "gecko": { "id": "tro-ly-sinh-vien@local", "strict_min_version": "121.0" }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://sv.epu.edu.vn/*"],
+      "js": ["config.js", "content/hide-fields.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://sv.epu.edu.vn/*"],
+      "js": ["config.js", "content/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Trợ lý Sinh viên",
+    "default_popup": "popup/popup.html"
+  },
+  "options_page": "options/options.html",
+  "commands": {
+    "_execute_action": {
+      "suggested_key": { "default": "Alt+S" },
+      "description": "Mở Trợ lý Sinh viên"
+    }
+  }
+}

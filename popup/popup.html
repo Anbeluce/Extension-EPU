@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Trợ lý Sinh viên</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h1 id="greeting">Trợ lý Sinh viên</h1>
+
+  <section>
+    <div id="links"></div>
+  </section>
+
+  <section>
+    <button id="btn-open-dashboard" style="width:100%">Tra cứu giảng viên</button>
+  </section>
+
+  <section>
+    <h2>Cookie</h2>
+    <div class="cookie-toolbar">
+      <button id="btn-export">Xuất</button>
+      <button id="btn-copy">Sao chép</button>
+      <button id="btn-import">Nhập</button>
+    </div>
+    <textarea id="cookie-data" rows="4" placeholder="Bấm Xuất để lấy cookie, hoặc dán JSON vào đây rồi bấm Nhập."></textarea>
+    <div class="cookie-toolbar">
+      <button id="btn-load-cookies" class="btn-secondary">Sửa cookie</button>
+      <button id="btn-add-cookie" class="btn-secondary">+ Thêm</button>
+    </div>
+    <div id="cookie-list"></div>
+    <p id="cookie-status"></p>
+  </section>
+
+  <section>
+    <h2>
+      <span>Đồng bộ Cookie</span>
+      <label class="toggle" title="Bật/tắt đồng bộ cookie lên Worker">
+        <input type="checkbox" id="sync-toggle">
+        <span class="toggle-slider"></span>
+      </label>
+    </h2>
+    <div id="sync-controls">
+      <button id="btn-sync-now">Đồng bộ ngay</button>
+      <button id="btn-sync-settings" class="btn-secondary">Cài đặt</button>
+    </div>
+    <p id="sync-status"></p>
+  </section>
+
+  <section>
+    <h2>Thông báo tin tức</h2>
+    <p><small>Chọn danh mục muốn nhận thông báo khi có bài viết mới.</small></p>
+    <div id="news-subs"></div>
+    <button id="btn-news-test" class="btn-secondary" style="margin-top:6px">Test thông báo</button>
+    <p id="news-status"></p>
+  </section>
+
+  <section>
+    <h2>
+      <span>Ẩn thông tin</span>
+      <label class="toggle" title="Bật/tắt ẩn thông tin cá nhân">
+        <input type="checkbox" id="hide-toggle">
+        <span class="toggle-slider"></span>
+      </label>
+    </h2>
+    <div id="hide-controls">
+      <button id="btn-hide-settings" class="btn-secondary">Chọn trường cần ẩn</button>
+    </div>
+    <p id="hide-status"></p>
+  </section>
+
+  <p id="status"></p>
+  <script src="../config.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
