@@ -3,10 +3,10 @@
 Extension hỗ trợ sinh viên thao tác nhanh trên web sinh viên của trường.
 
 ## Tính năng hiện có (bản khung)
-- Đọc thông tin sinh viên (MSSV, họ tên, lớp, ngành) từ trang web sinh viên và lưu lại.
 - Liên kết nhanh tới các trang hay dùng (TKB, điểm, đăng ký tín chỉ...).
-- Đăng ký tín chỉ nhanh: nhập danh sách mã học phần, extension tự điền và tìm lần lượt.
-  Mặc định chỉ điền và tìm; nút "Đăng ký" do sinh viên bấm (hoặc tick tùy chọn tự bấm).
+- Nhập/Xuất Cookie
+- Tra Cứu Giảng Viên
+- Đồng bộ Cookie với worker cloudflare
 
 ## Cài đặt thử
 1. Mở `chrome://extensions` (hoặc `edge://extensions`), bật **Developer mode**.
