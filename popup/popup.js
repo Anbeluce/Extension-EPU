@@ -223,57 +223,6 @@ $("btn-sync-now").addEventListener("click", async () => {
 
 $("btn-sync-settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
 
-// --- Thông báo tin tức ---
-
-const setNewsStatus = (text, isError = false) => {
-  $("news-status").textContent = text;
-  $("news-status").classList.toggle("error", isError);
-};
-
-async function loadNewsSubs() {
-  const { newsCategories, newsSubscriptions } = await chrome.storage.local.get(["newsCategories", "newsSubscriptions"]);
-  const container = $("news-subs");
-  container.replaceChildren();
-  const subs = newsSubscriptions || [];
-  if (!newsCategories?.length) {
-    setNewsStatus("Mở sv.epu.edu.vn để tải danh mục tin tức.", true);
-    return;
-  }
-  for (const cat of newsCategories) {
-    const label = document.createElement("label");
-    label.className = "news-sub-item";
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.value = cat;
-    cb.checked = subs.includes(cat);
-    cb.addEventListener("change", saveNewsSubs);
-    label.append(cb, " " + cat);
-    container.append(label);
-  }
-  setNewsStatus(subs.length ? `Đang theo dõi ${subs.length} danh mục.` : "Chưa đăng ký danh mục nào.");
-}
-
-async function saveNewsSubs() {
-  const checked = [...$("news-subs").querySelectorAll("input:checked")].map(c => c.value);
-  await chrome.storage.local.set({ newsSubscriptions: checked });
-  setNewsStatus(checked.length ? `Đang theo dõi ${checked.length} danh mục.` : "Chưa đăng ký danh mục nào.");
-}
-
-$("btn-news-test").addEventListener("click", async () => {
-  const { newsSubscriptions, newsLastSeen } = await chrome.storage.local.get(["newsSubscriptions", "newsLastSeen"]);
-  const subs = newsSubscriptions || [];
-  if (!subs.length) return setNewsStatus("Chưa đăng ký danh mục nào để test.", true);
-  const faked = { ...(newsLastSeen || {}) };
-  for (const s of subs) faked[s] = "/fake-test.html";
-  await chrome.storage.local.set({ newsLastSeen: faked });
-  const res = await send({ type: "RUN_NEWS_CHECK" });
-  if (res?.ok) {
-    setNewsStatus(`Test xong: ${res.newCount} bài mới được phát hiện.`);
-  } else {
-    setNewsStatus(res?.error || "Lỗi test.", true);
-  }
-});
-
 // --- Ẩn thông tin ---
 
 const setHideStatus = (text, isError = false) => {
@@ -301,7 +250,6 @@ $("btn-hide-settings").addEventListener("click", () => chrome.runtime.openOption
   const { studentName } = await chrome.storage.local.get("studentName");
   renderGreeting(studentName);
   renderLinks();
-  loadNewsSubs();
   loadSyncState();
   loadHideState();
 })();

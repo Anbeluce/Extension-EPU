@@ -55,10 +55,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     runAttendanceCheck(true).then(sendResponse);
     return true;
   }
-  if (msg.type === "RUN_NEWS_CHECK") {
-    runNewsCheck().then((result) => sendResponse(result || { ok: true }));
-    return true;
-  }
   if (msg.type === "FETCH_TEACHERS") {
     fetchTeacherList(msg.force).then(sendResponse);
     return true;
@@ -182,104 +178,6 @@ async function runAttendanceCheck(force = false) {
 
 setTimeout(() => runAttendanceCheck(false), 2000);
 setTimeout(() => chrome.runtime.sendMessage({ type: "SYNC_COOKIES" }), 3000);
-setTimeout(() => runNewsCheck(), 2500);
-
-// --- Thông báo tin tức mới ---
-
-async function fetchNewsCategories() {
-  const res = await fetch("/sinh-vien-tin-tuc-thong-bao.html", { credentials: "include" });
-  const html = await res.text();
-  const doc = new DOMParser().parseFromString(html, "text/html");
-
-  const tabs = doc.querySelectorAll(".sv-news-group-tabs li a");
-  const categories = [];
-
-  for (const tab of tabs) {
-    const name = tab.querySelector(".sv-news-group-tab-title span:last-child")?.textContent.trim();
-    const paneId = tab.getAttribute("href")?.replace("#", "");
-    const pane = paneId && doc.getElementById(paneId);
-    if (!name || !pane) continue;
-
-    const articles = [];
-    for (const a of pane.querySelectorAll(".sv-news-card .title, .sv-news-list .title")) {
-      const href = a.getAttribute("href");
-      const title = a.getAttribute("title") || a.textContent.trim();
-      const date = a.closest(".desc-txt")?.querySelector(".date")?.textContent.trim() || "";
-      if (href) articles.push({ title, href, date });
-    }
-    categories.push({ name, articles });
-  }
-
-  await chrome.storage.local.set({ newsCategories: categories.map(c => c.name) });
-  return categories;
-}
-
-async function runNewsCheck() {
-  console.log("[TL-SV] runNewsCheck started");
-
-  try {
-    const categories = await fetchNewsCategories();
-    console.log("[TL-SV] News categories:", categories.map(c => c.name + " (" + c.articles.length + ")"));
-
-    const { newsSubscriptions, newsLastSeen } = await chrome.storage.local.get(
-      ["newsSubscriptions", "newsLastSeen"]
-    );
-    const subs = newsSubscriptions || [];
-    const lastSeen = newsLastSeen || {};
-    const newLastSeen = { ...lastSeen };
-    const allNew = [];
-
-    for (const cat of categories) {
-      if (!cat.articles.length) continue;
-      const firstHref = cat.articles[0].href;
-
-      if (subs.includes(cat.name)) {
-        const oldHref = lastSeen[cat.name];
-        console.log("[TL-SV]", cat.name, "| old:", oldHref, "| new:", firstHref);
-        if (oldHref && oldHref !== firstHref) {
-          for (const a of cat.articles) {
-            if (a.href === oldHref) break;
-            allNew.push({ category: cat.name, ...a });
-          }
-        }
-      }
-      newLastSeen[cat.name] = firstHref;
-    }
-
-    console.log("[TL-SV] New articles:", allNew.length);
-    await chrome.storage.local.set({ newsLastSeen: newLastSeen });
-
-    const grouped = {};
-    for (const item of allNew) {
-      if (!grouped[item.category]) grouped[item.category] = [];
-      grouped[item.category].push(item);
-    }
-    for (const [cat, items] of Object.entries(grouped)) {
-      const show = items.slice(0, 3);
-      const lines = show.map(item => {
-        const href = location.origin + item.href;
-        const datePart = item.date ? `<span style="font-size:11px;opacity:.7">${item.date}</span> ` : "";
-        return `${datePart}<a href="${href}" target="_blank" style="color:#1d4ed8;text-decoration:underline">${item.title}</a>`;
-      });
-      if (items.length > 3) lines.push(`<span style="font-size:11px;opacity:.7">...và ${items.length - 3} bài khác</span>`);
-      chrome.runtime.sendMessage({
-        type: "SHOW_TOASTR",
-        message: lines.join("<br>"),
-        title: `${cat} (${items.length} bài mới)`,
-        options: {
-          timeOut: 0, closeButton: true, progressBar: true, enableHtml: true,
-          positionClass: "toast-top-right custom-toast-container",
-          tapToDismiss: false, extendedTimeOut: 0,
-        },
-      });
-    }
-    return { ok: true, newCount: allNew.length };
-  } catch (e) {
-    console.error("[TL-SV] News check error:", e);
-    return { ok: false, error: e.message };
-  }
-}
-
 // --- Thống kê % nghỉ học (chỉ trên dashboard) ---
 
 if (location.pathname.includes("dashboard")) {

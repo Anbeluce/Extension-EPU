@@ -35,10 +35,6 @@ h2 { display: flex; align-items: center; gap: 8px; }
 .toggle-slider::before { content: ""; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; background: #fff; border-radius: 50%; transition: transform .2s; }
 .toggle input:checked + .toggle-slider { background: #2563eb; }
 .toggle input:checked + .toggle-slider::before { transform: translateX(16px); }
-.news-sub-item { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 4px; cursor: pointer; }
-.news-sub-item:hover { color: #2563eb; }
-.news-sub-item input { width: auto; margin: 0; flex-shrink: 0; }
-#news-status { min-height: 1em; margin: 0; color: #047857; font-size: 12px; }
 #teacher-status { min-height: 1em; margin: 0; color: #047857; font-size: 12px; }
 #teacher-status.error { color: #b91c1c; }
 #teacher-grid table { width: 100%; border-collapse: collapse; font-size: 11px; }
@@ -47,7 +43,6 @@ h2 { display: flex; align-items: center; gap: 8px; }
 #teacher-grid tr:hover { background: #eff6ff; }
 .btn-detail { padding: 1px 6px; font-size: 10px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 3px; cursor: pointer; }
 .btn-detail:hover { background: #dbeafe; }
-#news-status.error { color: #b91c1c; }
 #sync-controls { display: flex; gap: 6px; margin-bottom: 4px; }
 #sync-status, #hide-status { min-height: 1em; margin: 0; color: #047857; font-size: 12px; }
 #sync-status.error, #hide-status.error { color: #b91c1c; }
