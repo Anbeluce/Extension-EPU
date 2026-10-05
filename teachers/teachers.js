@@ -5,29 +5,17 @@ const setStatus = (text, isError = false) => {
   $("status").classList.toggle("error", isError);
 };
 
-async function getAuthCookie() {
+// ASC.AUTH là cookie HttpOnly nên trang không đọc được; trình duyệt tự gắn nó khi dùng credentials + quyền host.
+async function apiFetch(path, options = {}) {
   const { portalUrl } = await getConfig();
-  const cookies = await chrome.cookies.getAll({ url: portalUrl, name: "ASC.AUTH" });
-  return cookies.length ? `ASC.AUTH=${cookies[0].value}` : null;
+  return fetch(portalUrl + path, { credentials: "include", ...options });
 }
 
-async function apiFetch(path, options = {}) {
-  const cookie = await getAuthCookie();
-  if (!cookie) throw new Error("Chưa đăng nhập. Hãy vào sv.epu.edu.vn đăng nhập trước.");
-  const { portalUrl } = await getConfig();
-  return fetch(portalUrl + path, {
-    ...options,
-    headers: { Cookie: cookie, ...(options.headers || {}) },
-  });
-}
+// Chưa đăng nhập thì server trả trang HTML đăng nhập thay vì JSON, nên res.json() báo SyntaxError.
+const explain = (e) =>
+  e instanceof SyntaxError ? new Error("Chưa đăng nhập hoặc phiên đã hết hạn. Hãy đăng nhập sv.epu.edu.vn rồi bấm Tải lại dữ liệu.") : e;
 
 // --- Data ---
-
-function parseTeacher(raw) {
-  const m = raw.Ten.match(/^(.+?)\s*-\s*(\d{5,})\s*-\s*(.+)$/);
-  if (!m) return null;
-  return { id: raw.ID, dept: m[1].trim(), code: m[2].trim(), name: m[3].trim() };
-}
 
 let allTeachers = [];
 let filtered = [];
@@ -47,15 +35,12 @@ async function loadTeachers(force = false) {
   }
   setStatus("Đang tải danh sách giảng viên...");
   try {
-    const res = await apiFetch("/SinhVien/SinhVien_GetGiangVienFullForSelect");
-    const data = await res.json();
-    allTeachers = data.map(parseTeacher).filter(Boolean);
-    await chrome.storage.local.set({ teacherList: allTeachers, teacherListAt: Date.now() });
+    allTeachers = await loadTeacherList(apiFetch);
     buildDeptFilter();
     applyFilters();
     setStatus(`${allTeachers.length} giảng viên.`);
   } catch (e) {
-    setStatus(e.message, true);
+    setStatus(explain(e).message, true);
   }
 }
 
@@ -63,13 +48,7 @@ function buildDeptFilter() {
   const select = $("filter-dept");
   const depts = [...new Set(allTeachers.map(t => t.dept))].sort();
   const current = select.value;
-  select.innerHTML = '<option value="">Tất cả khoa</option>';
-  for (const d of depts) {
-    const opt = document.createElement("option");
-    opt.value = d;
-    opt.textContent = d;
-    select.append(opt);
-  }
+  select.replaceChildren(h("option", { value: "" }, "Tất cả khoa"), ...depts.map(d => h("option", { value: d }, d)));
   if (current && depts.includes(current)) select.value = current;
 }
 
@@ -93,21 +72,18 @@ function renderPage() {
   const page = filtered.slice(start, start + PAGE_SIZE);
 
   if (!filtered.length) {
-    grid.innerHTML = '<div style="padding:24px;color:#6b7280;text-align:center">Không tìm thấy giảng viên phù hợp.</div>';
-    $("pagination").innerHTML = "";
+    grid.replaceChildren(h("div", { style: "padding:24px;color:#6b7280;text-align:center" }, "Không tìm thấy giảng viên phù hợp."));
+    $("pagination").replaceChildren();
     return;
   }
 
-  const table = document.createElement("table");
-  table.innerHTML = "<thead><tr><th>#</th><th>Khoa</th><th>Tên giảng viên</th><th>Mã GV</th></tr></thead>";
-  const tbody = document.createElement("tbody");
+  const tbody = h("tbody");
   page.forEach((t, i) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML =
-      `<td>${start + i + 1}</td>` +
-      `<td>${t.dept}</td>` +
-      `<td><b>${t.name}</b></td>` +
-      `<td>${t.code}</td>`;
+    const tr = h("tr", {},
+      h("td", {}, String(start + i + 1)),
+      h("td", {}, t.dept),
+      h("td", {}, h("b", {}, t.name)),
+      h("td", {}, t.code));
     tr.addEventListener("click", () => {
       grid.querySelector("tr.active")?.classList.remove("active");
       tr.classList.add("active");
@@ -115,15 +91,16 @@ function renderPage() {
     });
     tbody.append(tr);
   });
-  table.append(tbody);
-  grid.replaceChildren(table);
+  grid.replaceChildren(h("table", {},
+    h("thead", {}, h("tr", {}, h("th", {}, "#"), h("th", {}, "Khoa"), h("th", {}, "Tên giảng viên"), h("th", {}, "Mã GV"))),
+    tbody));
 
   renderPagination(totalPages);
 }
 
 function renderPagination(totalPages) {
   const pag = $("pagination");
-  if (totalPages <= 1) { pag.innerHTML = `<span>${filtered.length} kết quả</span>`; return; }
+  if (totalPages <= 1) { pag.replaceChildren(h("span", {}, `${filtered.length} kết quả`)); return; }
 
   pag.replaceChildren();
   const info = document.createElement("span");
@@ -159,56 +136,49 @@ function renderPagination(totalPages) {
 
 // --- Chi tiết ---
 
+const detailMessage = (text, color) =>
+  h("div", { style: `color:${color};text-align:center;padding:20px` }, text);
+
 async function showTeacherDetail(t) {
   const panel = $("teacher-detail");
-  panel.innerHTML = `<div style="color:#6b7280;text-align:center;padding:20px">Đang tải...</div>`;
+  panel.replaceChildren(detailMessage("Đang tải...", "#6b7280"));
   try {
-    const body = new URLSearchParams();
-    body.append("param[MaGiangVien]", t.code);
-    const res = await apiFetch("/SinhVien/GetThongTinGiangVien", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "X-Requested-With": "XMLHttpRequest" },
-      body,
-    });
-    const data = await res.json();
-    if (!Array.isArray(data) || !data.length) {
-      panel.innerHTML = `<div style="color:#b91c1c;text-align:center;padding:20px">Không có dữ liệu.</div>`;
+    const data = await loadTeacherDetail(apiFetch, t.code);
+    if (!data) {
+      panel.replaceChildren(detailMessage("Không có dữ liệu.", "#b91c1c"));
       return;
     }
-    renderDetail(data[0]);
+    renderDetail(data);
   } catch (e) {
-    panel.innerHTML = `<div style="color:#b91c1c;text-align:center;padding:20px">${e.message}</div>`;
+    panel.replaceChildren(detailMessage(explain(e).message, "#b91c1c"));
   }
 }
 
-function val(v) {
-  if (v === null || v === undefined || v === "") return '<span class="detail-value na">N/A</span>';
-  return `<span class="detail-value">${v}</span>`;
+function detailRow(label, v) {
+  const empty = v === null || v === undefined || v === "";
+  return h("div", { class: "detail-row" },
+    h("span", { class: "detail-label" }, `${label}:`),
+    h("span", { class: empty ? "detail-value na" : "detail-value" }, empty ? "N/A" : String(v)));
 }
 
 function renderDetail(d) {
-  const panel = $("teacher-detail");
-  panel.innerHTML =
-    `<div class="detail-header">
-      <h2>${d.HoTen || "N/A"}</h2>
-      <div class="detail-sub">${d.MaGiangVien || ""}</div>
-    </div>
-    <div class="detail-section">
-      <h3>Thông tin cá nhân</h3>
-      <div class="detail-row"><span class="detail-label">Họ đệm:</span>${val(d.HoDem)}</div>
-      <div class="detail-row"><span class="detail-label">Tên:</span>${val(d.Ten)}</div>
-      <div class="detail-row"><span class="detail-label">Họ tên:</span>${val(d.HoTen)}</div>
-      <div class="detail-row"><span class="detail-label">Ngày sinh:</span>${val(d.NgaySinh)}</div>
-    </div>
-    <div class="detail-section">
-      <h3>Đơn vị công tác</h3>
-      <div class="detail-row"><span class="detail-label">Khoa:</span>${val(d.TenKhoa)}</div>
-    </div>
-    <div class="detail-section">
-      <h3>Liên hệ</h3>
-      <div class="detail-row"><span class="detail-label">SĐT:</span>${val(d.SoDienThoai)}</div>
-      <div class="detail-row"><span class="detail-label">Email:</span>${val(d.Email)}</div>
-    </div>`;
+  $("teacher-detail").replaceChildren(
+    h("div", { class: "detail-header" },
+      h("h2", {}, d.HoTen || "N/A"),
+      h("div", { class: "detail-sub" }, d.MaGiangVien || "")),
+    h("div", { class: "detail-section" },
+      h("h3", {}, "Thông tin cá nhân"),
+      detailRow("Họ đệm", d.HoDem),
+      detailRow("Tên", d.Ten),
+      detailRow("Họ tên", d.HoTen),
+      detailRow("Ngày sinh", d.NgaySinh)),
+    h("div", { class: "detail-section" },
+      h("h3", {}, "Đơn vị công tác"),
+      detailRow("Khoa", d.TenKhoa)),
+    h("div", { class: "detail-section" },
+      h("h3", {}, "Liên hệ"),
+      detailRow("SĐT", d.SoDienThoai),
+      detailRow("Email", d.Email)));
 }
 
 // --- Events ---
@@ -216,6 +186,7 @@ function renderDetail(d) {
 $("teacher-search").addEventListener("input", applyFilters);
 $("filter-dept").addEventListener("change", applyFilters);
 $("btn-refresh").addEventListener("click", () => loadTeachers(true));
+$("btn-settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
 
 // --- Init ---
 loadTeachers();

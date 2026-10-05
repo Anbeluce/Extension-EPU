@@ -1,13 +1,6 @@
 try { importScripts("/config.js"); } catch {}
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg.type === "GET_COOKIES") {
-    chrome.cookies.getAll({ url: msg.url })
-      .then((cookies) => sendResponse({ ok: true, cookies }))
-      .catch((e) => sendResponse({ ok: false, error: e.message }));
-    return true;
-  }
-
   if (msg.type === "SYNC_COOKIES") {
     syncCookies(msg.force).then(sendResponse);
     return true;
@@ -47,6 +40,15 @@ async function syncCookies(force = false) {
 
   if (!cookieSync?.enabled || !cookieSync?.workerUrl || !cookieSync?.userName) {
     return { ok: false, error: "Chưa cấu hình đồng bộ cookie." };
+  }
+
+  // Cookie đăng nhập chỉ được gửi tới địa chỉ https mà người dùng đã cấp quyền.
+  if (!isHttps(cookieSync.workerUrl)) {
+    return { ok: false, error: "Worker URL phải bắt đầu bằng https://" };
+  }
+  const workerOrigin = new URL(cookieSync.workerUrl).origin + "/*";
+  if (!(await chrome.permissions.contains({ origins: [workerOrigin] }))) {
+    return { ok: false, error: "Chưa cấp quyền cho Worker. Hãy tắt rồi bật lại 'Đồng bộ Cookie' trong popup." };
   }
 
   if (!force) {

@@ -55,3 +55,18 @@ const getConfig = async () => {
   const stored = await chrome.storage.sync.get("config");
   return { ...DEFAULT_CONFIG, ...(stored.config || {}) };
 };
+
+const isHttps = (url) => {
+  try { return new URL(url).protocol === "https:"; } catch { return false; }
+};
+
+// Xin quyền truy cập các địa chỉ https (một hộp thoại cho tất cả). Phải gọi từ thao tác của người dùng (click...).
+async function ensureOriginPermission(...urls) {
+  const list = urls.filter(Boolean);
+  if (!list.length) return { ok: false, error: "Chưa nhập địa chỉ." };
+  if (!list.every(isHttps)) return { ok: false, error: "Địa chỉ phải bắt đầu bằng https://" };
+  const origins = [...new Set(list.map((u) => new URL(u).origin + "/*"))];
+  if (await chrome.permissions.contains({ origins })) return { ok: true };
+  const granted = await chrome.permissions.request({ origins });
+  return granted ? { ok: true } : { ok: false, error: "Bạn đã từ chối cấp quyền truy cập." };
+}

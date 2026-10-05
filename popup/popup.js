@@ -17,17 +17,8 @@ async function renderLinks() {
   }));
 }
 
-async function send(message) {
-  const tab = await activeTab();
-  try {
-    return await chrome.tabs.sendMessage(tab.id, message);
-  } catch {
-    return { ok: false, error: "Hãy mở trang sv.epu.edu.vn ở tab hiện tại." };
-  }
-}
-
-$("btn-open-dashboard").addEventListener("click", () => {
-  chrome.tabs.create({ url: chrome.runtime.getURL("dashboard/dashboard.html") });
+$("btn-open-teachers").addEventListener("click", () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL("teachers/teachers.html") });
 });
 
 // --- Cookie ---
@@ -208,10 +199,18 @@ async function loadSyncState() {
 }
 
 $("sync-toggle").addEventListener("change", async () => {
+  const enabled = $("sync-toggle").checked;
   const config = await getConfig();
-  config.cookieSync = { ...(config.cookieSync || {}), enabled: $("sync-toggle").checked };
+  if (enabled) {
+    const perm = await ensureOriginPermission(config.cookieSync?.workerUrl);
+    if (!perm.ok) {
+      $("sync-toggle").checked = false;
+      return setSyncStatus(perm.error === "Chưa nhập địa chỉ." ? "Chưa cấu hình. Vào Cài đặt để nhập Worker URL và MSSV." : perm.error, true);
+    }
+  }
+  config.cookieSync = { ...(config.cookieSync || {}), enabled };
   await chrome.storage.sync.set({ config });
-  setSyncStatus($("sync-toggle").checked ? "Đã bật đồng bộ." : "Đã tắt đồng bộ.");
+  setSyncStatus(enabled ? "Đã bật đồng bộ." : "Đã tắt đồng bộ.");
 });
 
 $("btn-sync-now").addEventListener("click", async () => {

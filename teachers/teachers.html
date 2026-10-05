@@ -3,12 +3,15 @@
 <head>
   <meta charset="utf-8">
   <title>Tra cứu giảng viên — Trợ lý Sinh viên</title>
-  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="teachers.css">
 </head>
 <body>
   <header>
     <h1>Tra cứu giảng viên</h1>
-    <button id="btn-refresh" class="btn-header">Tải lại dữ liệu</button>
+    <div class="header-actions">
+      <button id="btn-refresh" class="btn-header">Tải lại dữ liệu</button>
+      <button id="btn-settings" class="btn-header">Cài đặt</button>
+    </div>
   </header>
 
   <div class="container">
@@ -27,6 +30,8 @@
   </div>
 
   <script src="../config.js"></script>
-  <script src="dashboard.js"></script>
+  <script src="../shared/dom.js"></script>
+  <script src="../shared/teachers.js"></script>
+  <script src="teachers.js"></script>
 </body>
 </html>

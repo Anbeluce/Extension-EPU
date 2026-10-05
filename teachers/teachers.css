@@ -5,6 +5,7 @@ header { background: #1d4ed8; color: #fff; padding: 12px 24px; display: flex; al
 header h1 { margin: 0; font-size: 18px; }
 .btn-header { padding: 6px 14px; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; background: rgba(255,255,255,.1); color: #fff; cursor: pointer; font: inherit; font-size: 13px; }
 .btn-header:hover { background: rgba(255,255,255,.25); }
+.header-actions { display: flex; gap: 8px; }
 
 .container { display: flex; flex: 1; min-height: 0; }
 

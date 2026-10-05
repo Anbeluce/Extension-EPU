@@ -1,11 +1,18 @@
 {
   "manifest_version": 3,
   "name": "Trợ lý Sinh viên",
-  "version": "0.1.0",
-  "description": "Hỗ trợ sinh viên thao tác nhanh trên web sinh viên: xem thông tin, liên kết nhanh, đăng ký tín chỉ nhanh hơn.",
-  "permissions": ["storage", "activeTab", "scripting", "tabs", "cookies", "notifications"],
-  "icons": { "48": "icons/icon48.png" },
-  "host_permissions": ["*://*.epu.edu.vn/*", "https://*.workers.dev/*"],
+  "version": "0.2.0",
+  "description": "Tiện ích cho web sinh viên EPU: liên kết nhanh, tra cứu giảng viên, thống kê nghỉ học, quản lý cookie, quét mã QR.",
+  "minimum_chrome_version": "121",
+  "permissions": ["storage", "activeTab", "scripting", "cookies", "notifications"],
+  "host_permissions": ["*://sv.epu.edu.vn/*"],
+  "optional_host_permissions": ["https://*/*"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "background": {
     "service_worker": "background/service-worker.js",
     "scripts": ["config.js", "background/service-worker.js"]
@@ -16,18 +23,30 @@
   "content_scripts": [
     {
       "matches": ["https://sv.epu.edu.vn/*"],
-      "js": ["config.js", "content/hide-fields.js"],
+      "js": ["content/hide-fields.js"],
       "run_at": "document_start"
     },
     {
       "matches": ["https://sv.epu.edu.vn/*"],
-      "js": ["config.js", "content/content.js"],
+      "js": [
+        "shared/dom.js",
+        "shared/teachers.js",
+        "content/student-info.js",
+        "content/attendance.js",
+        "content/absent-dashboard.js",
+        "content/teachers.js",
+        "content/main.js"
+      ],
       "run_at": "document_idle"
     }
   ],
   "action": {
     "default_title": "Trợ lý Sinh viên",
-    "default_popup": "popup/popup.html"
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
   },
   "options_page": "options/options.html",
   "commands": {

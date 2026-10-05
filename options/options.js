@@ -105,13 +105,21 @@ $("btn-add-link").addEventListener("click", () => {
 
 $("save").addEventListener("click", async () => {
   const oldConfig = await getConfig();
+  const portalUrl = $("portalUrl").value.trim();
+  const workerUrl = $("sync-worker-url").value.trim();
+  if (!isHttps(portalUrl)) return say("Địa chỉ web sinh viên phải bắt đầu bằng https://");
+  if (workerUrl && !isHttps(workerUrl)) return say("Worker URL phải bắt đầu bằng https://");
+
+  const perm = await ensureOriginPermission(portalUrl, oldConfig.cookieSync?.enabled && workerUrl);
+  if (!perm.ok) return say(perm.error);
+
   const config = {
     ...oldConfig,
-    portalUrl: $("portalUrl").value.trim(),
+    portalUrl,
     quickLinks: currentLinks,
     cookieSync: {
       ...(oldConfig.cookieSync || {}),
-      workerUrl: $("sync-worker-url").value.trim(),
+      workerUrl,
       userName: $("sync-user-name").value.trim(),
     },
   };
