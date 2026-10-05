@@ -5,6 +5,16 @@
 const CALENDAR_PATH = "/SinhVien/GetDanhSachLichTheoTuan";
 const CALENDAR_DELAY_MS = 700;
 
+// Lỗi tạm thời (mất mạng, server lỗi) thì tự thử lại, chờ lâu dần; từ lần thứ 5 trở đi cứ 60 phút một lần.
+// Mỗi ngày thử lại tối đa CALENDAR_MAX_RETRIES lần, quá thì đợi lần mở trình duyệt/vào web sinh viên tiếp theo.
+const CALENDAR_RETRY_ALARM = "calendar-retry";
+const CALENDAR_RETRY_MINUTES = [1, 5, 15, 30, 60];
+const CALENDAR_MAX_RETRIES = 12;
+
+const calRetryable = (message) => Object.assign(new Error(message), { retry: true });
+const calHttpError = (message, status) =>
+  Object.assign(new Error(message), { retry: status >= 500 || status === 429 || status === 408 });
+
 const calSleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const calDayKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 const calFormat = (d) =>
@@ -64,7 +74,7 @@ function parseCalendarHtml(html) {
 }
 
 async function calFetchWeek(portalUrl, dateStr) {
-  let res;
+  let res, text;
   try {
     res = await fetch(new URL(CALENDAR_PATH, portalUrl).href, {
       method: "POST",
@@ -76,11 +86,11 @@ async function calFetchWeek(portalUrl, dateStr) {
       },
       body: new URLSearchParams({ pNgayHienTai: dateStr, pLoaiLich: "0" }),
     });
+    text = await res.text();
   } catch {
-    throw new Error("Không kết nối được tới web sinh viên.");
+    throw calRetryable("Không kết nối được tới web sinh viên.");
   }
-  const text = await res.text();
-  if (!res.ok) throw new Error(`Web sinh viên trả về lỗi ${res.status}.`);
+  if (!res.ok) throw calHttpError(`Web sinh viên trả về lỗi ${res.status}.`, res.status);
   if (text.includes("Đăng nhập") || !text.includes("table-responsive")) {
     throw new Error("Chưa đăng nhập web sinh viên hoặc phiên đã hết hạn. Hãy đăng nhập rồi bấm Đồng bộ ngay.");
   }
@@ -117,24 +127,50 @@ async function calUpload(workerUrl, data) {
       body: JSON.stringify({ id: data.mssv, dates: data.dates, events: data.events }),
     });
   } catch {
-    throw new Error("Không kết nối được tới Worker lịch.");
+    throw calRetryable("Không kết nối được tới Worker lịch.");
   }
   if (!res.ok) {
     let detail = "";
     try { detail = (await res.json()).error || ""; } catch { /* không phải JSON */ }
-    throw new Error(`Worker lịch trả về lỗi ${res.status}${detail ? ": " + detail : ""}`);
+    throw calHttpError(`Worker lịch trả về lỗi ${res.status}${detail ? ": " + detail : ""}`, res.status);
   }
 }
 
+// Gặp lỗi tạm thời mà hôm nay chưa có lần thành công nào thì hẹn thử lại bằng chrome.alarms.
+async function calFail(e, today) {
+  let message = e.message;
+  if (e.retry) {
+    const { calendarSyncedDay, calendarRetry } = await chrome.storage.local.get(["calendarSyncedDay", "calendarRetry"]);
+    if (calendarSyncedDay !== today) {
+      const n = calendarRetry?.day === today ? calendarRetry.n : 0;
+      if (n < CALENDAR_MAX_RETRIES) {
+        const delay = CALENDAR_RETRY_MINUTES[Math.min(n, CALENDAR_RETRY_MINUTES.length - 1)];
+        await chrome.storage.local.set({ calendarRetry: { day: today, n: n + 1 } });
+        await chrome.alarms.create(CALENDAR_RETRY_ALARM, { delayInMinutes: delay });
+        message += ` Tự thử lại sau ${delay} phút.`;
+      } else {
+        message += " Đã thử lại nhiều lần hôm nay, sẽ thử tiếp khi mở trình duyệt hoặc vào web sinh viên.";
+      }
+    }
+  }
+  return calSetStatus(false, message);
+}
+
+const calStopRetry = () => chrome.alarms.clear(CALENDAR_RETRY_ALARM);
+
 async function calSetStatus(ok, message) {
   await chrome.storage.local.set({ calendarStatus: { ok, message, at: Date.now() } });
+  if (!ok) await notifySyncFailure(message).catch(() => {}); // lỗi từ Discord không được làm hỏng đồng bộ
   return ok ? { ok, message } : { ok, error: message };
 }
 
 async function runCalendarSync(force) {
   const config = await getConfig();
   const cal = calendarSettings(config);
-  if (!cal.enabled) return { ok: false, skipped: true, error: "Chưa bật đồng bộ lịch học." };
+  if (!cal.enabled) {
+    await calStopRetry();
+    return { ok: false, skipped: true, error: "Chưa bật đồng bộ lịch học." };
+  }
   if (!cal.workerUrl) return calSetStatus(false, "Chưa có địa chỉ Worker lịch. Vào Cài đặt để nhập.");
   if (!isHttps(cal.workerUrl)) return calSetStatus(false, "Địa chỉ Worker lịch phải bắt đầu bằng https://");
   if (!(await chrome.permissions.contains({ origins: [new URL(cal.workerUrl).origin + "/*"] }))) {
@@ -143,9 +179,12 @@ async function runCalendarSync(force) {
   const range = calendarRange(cal);
   if (range.error) return calSetStatus(false, range.error);
 
-  const stored = await chrome.storage.local.get(["studentMSSV", "calendarSyncedDay", "calendarData"]);
+  const stored = await chrome.storage.local.get(["studentMSSV", "calendarSyncedDay", "calendarData", "calendarLastEvents"]);
   const today = calDayKey();
-  if (!force && stored.calendarSyncedDay === today) return { ok: true, skipped: true };
+  if (!force && stored.calendarSyncedDay === today) {
+    await calStopRetry();
+    return { ok: true, skipped: true };
+  }
 
   const mssv = String(stored.studentMSSV || "").trim();
   if (!mssv) return calSetStatus(false, "Chưa biết mã sinh viên. Hãy mở web sinh viên một lần rồi thử lại.");
@@ -162,10 +201,23 @@ async function runCalendarSync(force) {
     }
     await calUpload(cal.workerUrl, data);
     data.uploaded = true;
-    await chrome.storage.local.set({ calendarData: data, calendarSyncedDay: today, calendarSyncedAt: Date.now() });
-    return calSetStatus(true, `Đã gửi ${data.events.length} buổi học (${data.weeks} tuần, từ ${calFormat(range.start)} đến ${calFormat(range.end)}).`);
+
+    // Ảnh chụp lịch đã gửi thành công gần nhất, dùng để biết buổi nào mới/đổi/hủy. Lần đầu chưa có gì để so sánh.
+    const dates = new Set(data.dates);
+    const previous = stored.calendarLastEvents;
+    const diff = previous ? calDiff(previous, data.events, dates) : null;
+    const lastEvents = (previous || []).filter((e) => !dates.has(e.date)).concat(data.events);
+    await chrome.storage.local.set({
+      calendarData: data, calendarLastEvents: lastEvents, calendarSyncedDay: today, calendarSyncedAt: Date.now(),
+    });
+    await calStopRetry();
+    await chrome.storage.local.remove("calendarRetry");
+
+    const summary = `${data.events.length} buổi học (${data.weeks} tuần, từ ${calFormat(range.start)} đến ${calFormat(range.end)}).`;
+    await notifySyncSuccess({ diff, summary }).catch(() => {});
+    return calSetStatus(true, `Đã gửi ${summary}`);
   } catch (e) {
-    return calSetStatus(false, e.message);
+    return calFail(e, today);
   }
 }
 

@@ -102,6 +102,16 @@ function calendarRange(cal, today = new Date()) {
   return { start, end, startIso: isoDate(start), endIso: isoDate(end) };
 }
 
+const DISCORD_WEBHOOK_RE =
+  /^https:\/\/(?:(?:canary|ptb)\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+\/?(?:\?[\w=&%.-]*)?$/;
+const isDiscordWebhook = (url) => DISCORD_WEBHOOK_RE.test(String(url || "").trim());
+
+// Link webhook là bí mật nên lưu ở storage.local (không đồng bộ qua tài khoản Google như phần cấu hình khác).
+async function getWebhook() {
+  const { webhook } = await chrome.storage.local.get("webhook");
+  return { url: "", ...(webhook || {}) };
+}
+
 // Link .ics của sinh viên: <địa chỉ Worker>?id=<MSSV>
 function calendarLink(workerUrl, mssv) {
   if (!isHttps(workerUrl) || !mssv) return "";

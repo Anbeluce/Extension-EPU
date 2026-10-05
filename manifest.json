@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "EPU Extension",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Tiện ích cho web sinh viên EPU: liên kết nhanh, tra cứu giảng viên, thống kê nghỉ học, quản lý cookie, quét mã QR.",
   "minimum_chrome_version": "121",
-  "permissions": ["storage", "activeTab", "scripting", "cookies", "notifications"],
+  "permissions": ["storage", "activeTab", "scripting", "cookies", "notifications", "alarms"],
   "host_permissions": ["*://sv.epu.edu.vn/*"],
   "optional_host_permissions": ["https://*/*"],
   "icons": {
@@ -15,7 +15,7 @@
   },
   "background": {
     "service_worker": "background/service-worker.js",
-    "scripts": ["config.js", "background/calendar-sync.js", "background/service-worker.js"]
+    "scripts": ["config.js", "background/webhook.js", "background/calendar-sync.js", "background/service-worker.js"]
   },
   "browser_specific_settings": {
     "gecko": { "id": "tro-ly-sinh-vien@local", "strict_min_version": "121.0" }

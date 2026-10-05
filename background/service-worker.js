@@ -1,8 +1,13 @@
-try { importScripts("/config.js", "/background/calendar-sync.js"); } catch {}
+try { importScripts("/config.js", "/background/webhook.js", "/background/calendar-sync.js"); } catch {}
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "SYNC_COOKIES") {
     syncCookies(msg.force).then(sendResponse);
+    return true;
+  }
+
+  if (msg.type === "TEST_WEBHOOK") {
+    sendTestWebhook().then(sendResponse);
     return true;
   }
 
@@ -114,6 +119,10 @@ async function startQrScan(tab) {
 }
 
 chrome.runtime.onStartup.addListener(() => { syncCalendar(); });
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === CALENDAR_RETRY_ALARM) syncCalendar();
+});
 
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason === "install") chrome.runtime.openOptionsPage();

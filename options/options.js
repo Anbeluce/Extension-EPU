@@ -96,6 +96,8 @@ async function load() {
   $("cal-from").value = cal.fromDate;
   $("cal-to").value = cal.toDate;
   renderCalendarStatus();
+
+  $("webhook-url").value = (await getWebhook()).url;
 }
 
 async function renderCalendarStatus() {
@@ -139,7 +141,12 @@ async function saveAll() {
   const range = calendarRange(newCal);
   if (range.error) return fail(range.error);
 
-  const perm = await ensureOriginPermission(portalUrl, oldConfig.cookieSync?.enabled && workerUrl, calEnabled && calUrl);
+  const webhookUrl = $("webhook-url").value.trim();
+  if (webhookUrl && !isDiscordWebhook(webhookUrl)) {
+    return fail("Chỉ hỗ trợ link webhook Discord, dạng https://discord.com/api/webhooks/<số>/<mã>");
+  }
+
+  const perm = await ensureOriginPermission(portalUrl, oldConfig.cookieSync?.enabled && workerUrl, calEnabled && calUrl, webhookUrl);
   if (!perm.ok) return fail(perm.error);
 
   const oldCal = calendarSettings(oldConfig);
@@ -158,7 +165,7 @@ async function saveAll() {
   const hiddenFields = getSelectedHideFields();
   const customHideCSS = $("custom-hide-css").value.trim();
   const hideCSS = buildHideCSS(hiddenFields, customHideCSS);
-  await chrome.storage.local.set({ hiddenFields, customHideCSS, hideCSS });
+  await chrome.storage.local.set({ hiddenFields, customHideCSS, hideCSS, webhook: { url: webhookUrl } });
   return { newCal, calChanged: JSON.stringify(oldCal) !== JSON.stringify(newCal) };
 }
 
@@ -181,6 +188,13 @@ $("btn-cal-sync").addEventListener("click", async () => {
   if (!saved) return;
   if (!saved.newCal.enabled) return say("Đã lưu. Hãy tick 'Bật đồng bộ lịch học' để đồng bộ.");
   await syncCalendarNow();
+});
+
+$("btn-wh-test").addEventListener("click", async () => {
+  if (!(await saveAll())) return;
+  say("Đang gửi tin thử...");
+  const res = await chrome.runtime.sendMessage({ type: "TEST_WEBHOOK" });
+  say(res?.ok ? "Đã gửi tin thử, hãy kiểm tra kênh Discord." : (res?.error || "Không gửi được tin thử."));
 });
 
 $("btn-cal-copy").addEventListener("click", async () => {

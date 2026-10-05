@@ -74,6 +74,13 @@
   </div>
   <button id="btn-cal-sync">Lưu và đồng bộ ngay</button>
 
+  <h2>Thông báo qua webhook Discord</h2>
+  <p><small>Dán link webhook Discord (Cài đặt kênh &gt; Tích hợp &gt; Webhook). Mỗi lần đồng bộ lịch học, dù thành công hay thất bại, kể cả mỗi lần tự thử lại, extension đều gửi một tin vào kênh đó (thành công thì kèm lịch có thay đổi gì). Link này là bí mật, chỉ lưu trong trình duyệt này, không gửi lên Worker. Để trống là tắt.</small></p>
+  <label>Link webhook
+    <input id="webhook-url" type="url" placeholder="https://discord.com/api/webhooks/...">
+  </label>
+  <button id="btn-wh-test">Lưu và gửi tin thử</button>
+
   <h2>Đồng bộ Cookie (Worker)</h2>
   <p><small>Tự động gửi cookie lên Cloudflare Worker để cào lịch. Bật/tắt trong popup.</small></p>
   <label>Worker URL
