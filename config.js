@@ -15,7 +15,7 @@ const DEFAULT_CONFIG = {
   },
   calendarSync: {
     enabled: false,
-    workerUrl: "https://epu-calendar-ics.nguyen-viet-thao-25.workers.dev", // Worker lịch (thư mục calendar-worker/)
+    workerUrl: "https://calender.epuer.id.vn/", // Worker lịch (thư mục calendar-worker/)
     fromDate: "", // yyyy-mm-dd; để trống = hôm nay
     toDate: "", // yyyy-mm-dd; để trống = 12 tuần sau ngày bắt đầu
   },
