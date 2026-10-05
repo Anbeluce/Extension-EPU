@@ -1,4 +1,4 @@
-# Đóng gói extension thành dist/tro-ly-sinh-vien-<version>.zip, chỉ gồm file cần thiết
+# Đóng gói extension thành dist/epu-extension-<version>.zip, chỉ gồm file cần thiết
 # (không kèm html/, .playwright-mcp/, tools/, README...). Chạy: powershell -File tools/package.ps1
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -9,7 +9,7 @@ $include = "manifest.json", "config.js", "icons", "lib", "shared", "background",
 
 $dist = Join-Path $root "dist"
 New-Item -ItemType Directory -Force $dist | Out-Null
-$zipPath = Join-Path $dist "tro-ly-sinh-vien-$version.zip"
+$zipPath = Join-Path $dist "epu-extension-$version.zip"
 if (Test-Path $zipPath) { Remove-Item $zipPath }
 
 $zip = [System.IO.Compression.ZipFile]::Open($zipPath, "Create")

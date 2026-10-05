@@ -2,11 +2,11 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <title>Trợ lý Sinh viên</title>
+  <title>EPU Extension</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <h1 id="greeting">Trợ lý Sinh viên</h1>
+  <h1 id="greeting">EPU Extension</h1>
 
   <section>
     <div id="links"></div>
@@ -14,6 +14,16 @@
 
   <section>
     <button id="btn-open-teachers" style="width:100%">Tra cứu giảng viên</button>
+  </section>
+
+  <section>
+    <h2>Lịch học (.ics)</h2>
+    <div id="cal-controls">
+      <button id="btn-cal-copy">Sao chép link</button>
+      <button id="btn-cal-sync">Đồng bộ ngay</button>
+      <button id="btn-cal-settings" class="btn-secondary">Cài đặt</button>
+    </div>
+    <p id="cal-status"></p>
   </section>
 
   <section>

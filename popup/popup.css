@@ -43,9 +43,9 @@ h2 { display: flex; align-items: center; gap: 8px; }
 #teacher-grid tr:hover { background: #eff6ff; }
 .btn-detail { padding: 1px 6px; font-size: 10px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 3px; cursor: pointer; }
 .btn-detail:hover { background: #dbeafe; }
-#sync-controls { display: flex; gap: 6px; margin-bottom: 4px; }
-#sync-status, #hide-status { min-height: 1em; margin: 0; color: #047857; font-size: 12px; }
-#sync-status.error, #hide-status.error { color: #b91c1c; }
+#sync-controls, #cal-controls { display: flex; gap: 6px; margin-bottom: 4px; }
+#sync-status, #hide-status, #cal-status { min-height: 1em; margin: 0; color: #047857; font-size: 12px; }
+#sync-status.error, #hide-status.error, #cal-status.error { color: #b91c1c; }
 #hide-controls { display: flex; gap: 6px; margin-bottom: 4px; }
 #status { min-height: 1em; margin: 0; color: #047857; }
 #status.error { color: #b91c1c; }

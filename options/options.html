@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <title>Cài đặt - Trợ lý Sinh viên</title>
+  <title>Cài đặt - EPU Extension</title>
   <style>
     body { max-width: 640px; margin: 24px auto; padding: 0 16px; font: 14px/1.5 system-ui, sans-serif; }
     h2 { font-size: 15px; margin: 18px 0 8px; }
@@ -23,10 +23,16 @@
     .hide-grid label { font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center; gap: 6px; }
     .hide-grid label:hover { color: #2563eb; }
     .hide-grid input[type="checkbox"] { width: auto; margin: 0; flex-shrink: 0; }
+    .check { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .check input { width: auto; margin: 0; }
+    .cal-range { margin: 8px 0; }
+    .cal-range input { width: auto; margin: 0 4px; padding: 4px; }
+    #cal-status { margin: 6px 0; font-size: 13px; color: #047857; }
+    #cal-status.error { color: #b91c1c; }
   </style>
 </head>
 <body>
-  <h1>Cài đặt Trợ lý Sinh viên</h1>
+  <h1>Cài đặt EPU Extension</h1>
   <p><small>Chỉnh địa chỉ web sinh viên, liên kết nhanh, thông tin cần ẩn và đồng bộ cookie. Nhớ bấm Lưu.</small></p>
 
   <label>Địa chỉ web sinh viên
@@ -50,6 +56,23 @@
   <label style="margin-top:8px">CSS tuỳ chỉnh (ẩn thêm phần tử bất kỳ)
     <textarea id="custom-hide-css" rows="3" placeholder="#my-element { display: none !important; }"></textarea>
   </label>
+
+  <h2>Đồng bộ lịch học (tự động)</h2>
+  <p><small>Khi mở trình duyệt (tối đa 1 lần mỗi ngày), extension tự lấy lịch học từ web sinh viên rồi gửi lên Worker để tạo link lịch .ics. Cần đang đăng nhập web sinh viên.</small></p>
+  <label class="check"><input type="checkbox" id="cal-enabled"> Bật đồng bộ lịch học</label>
+  <label>Địa chỉ Worker lịch
+    <input id="cal-worker-url" type="url" placeholder="https://epu-calendar.your-name.workers.dev">
+  </label>
+  <div class="cal-range">
+    Lấy lịch từ ngày <input id="cal-from" type="date"> đến ngày <input id="cal-to" type="date">
+    <br><small>Để trống "từ ngày" là hôm nay; để trống "đến ngày" là 12 tuần sau ngày bắt đầu. Tối đa 1 năm.</small>
+  </div>
+  <p id="cal-status"></p>
+  <div class="add-row">
+    <input id="cal-link" type="text" readonly placeholder="Link lịch .ics sẽ hiện ở đây sau khi đồng bộ">
+    <button id="btn-cal-copy">Sao chép link</button>
+  </div>
+  <button id="btn-cal-sync">Lưu và đồng bộ ngay</button>
 
   <h2>Đồng bộ Cookie (Worker)</h2>
   <p><small>Tự động gửi cookie lên Cloudflare Worker để cào lịch. Bật/tắt trong popup.</small></p>

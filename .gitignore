@@ -1,3 +1,4 @@
 /html/
 .playwright-mcp
 /dist/
+/worker.js

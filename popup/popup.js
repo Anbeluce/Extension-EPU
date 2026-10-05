@@ -3,7 +3,7 @@ const $ = (id) => document.getElementById(id);
 const activeTab = async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
 
 function renderGreeting(name) {
-  $("greeting").textContent = name ? `Xin chào, ${name}` : "Trợ lý Sinh viên";
+  $("greeting").textContent = name ? `Xin chào, ${name}` : "EPU Extension";
 }
 
 async function renderLinks() {
@@ -222,6 +222,39 @@ $("btn-sync-now").addEventListener("click", async () => {
 
 $("btn-sync-settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
 
+// --- Lịch học ---
+
+const setCalStatus = (text, isError = false) => {
+  $("cal-status").textContent = text;
+  $("cal-status").classList.toggle("error", isError);
+};
+
+async function loadCalendarState() {
+  const cal = calendarSettings(await getConfig());
+  if (!cal.enabled) return setCalStatus("Chưa bật. Vào Cài đặt để bật đồng bộ lịch học.");
+  const { calendarStatus } = await chrome.storage.local.get("calendarStatus");
+  if (!calendarStatus) return setCalStatus("Chưa đồng bộ lần nào. Tự chạy khi mở trình duyệt.");
+  setCalStatus(`${calendarStatus.message} (${new Date(calendarStatus.at).toLocaleString("vi-VN")})`, !calendarStatus.ok);
+}
+
+$("btn-cal-copy").addEventListener("click", async () => {
+  const cal = calendarSettings(await getConfig());
+  const { studentMSSV, calendarSyncedAt } = await chrome.storage.local.get(["studentMSSV", "calendarSyncedAt"]);
+  const link = calendarSyncedAt ? calendarLink(cal.workerUrl, studentMSSV) : "";
+  if (!link) return setCalStatus("Chưa có link. Hãy bật và đồng bộ lịch ít nhất một lần.", true);
+  await navigator.clipboard.writeText(link);
+  setCalStatus("Đã sao chép link lịch .ics.");
+});
+
+$("btn-cal-sync").addEventListener("click", async () => {
+  setCalStatus("Đang đồng bộ lịch...");
+  const res = await chrome.runtime.sendMessage({ type: "SYNC_CALENDAR", force: true });
+  if (res?.skipped) return setCalStatus(res.error, true);
+  await loadCalendarState();
+});
+
+$("btn-cal-settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
+
 // --- Ẩn thông tin ---
 
 const setHideStatus = (text, isError = false) => {
@@ -250,5 +283,6 @@ $("btn-hide-settings").addEventListener("click", () => chrome.runtime.openOption
   renderGreeting(studentName);
   renderLinks();
   loadSyncState();
+  loadCalendarState();
   loadHideState();
 })();

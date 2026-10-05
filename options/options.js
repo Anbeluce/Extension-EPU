@@ -90,6 +90,24 @@ async function load() {
   $("sync-worker-url").value = config.cookieSync?.workerUrl || "";
   $("sync-user-name").value = config.cookieSync?.userName || "";
 
+  const cal = calendarSettings(config);
+  $("cal-enabled").checked = cal.enabled;
+  $("cal-worker-url").value = cal.workerUrl;
+  $("cal-from").value = cal.fromDate;
+  $("cal-to").value = cal.toDate;
+  renderCalendarStatus();
+}
+
+async function renderCalendarStatus() {
+  const cal = calendarSettings(await getConfig());
+  const { calendarStatus, calendarSyncedAt, studentMSSV } =
+    await chrome.storage.local.get(["calendarStatus", "calendarSyncedAt", "studentMSSV"]);
+  const el = $("cal-status");
+  el.textContent = calendarStatus
+    ? `${calendarStatus.message} (${new Date(calendarStatus.at).toLocaleString("vi-VN")})`
+    : "Chưa đồng bộ lần nào.";
+  el.classList.toggle("error", !!calendarStatus && !calendarStatus.ok);
+  $("cal-link").value = calendarSyncedAt ? calendarLink(cal.workerUrl, studentMSSV) : "";
 }
 
 $("btn-add-link").addEventListener("click", () => {
@@ -103,16 +121,28 @@ $("btn-add-link").addEventListener("click", () => {
   say("Đã thêm. Nhớ bấm Lưu.");
 });
 
-$("save").addEventListener("click", async () => {
+const fail = (text) => { say(text); return null; };
+
+// Trả về null nếu có lỗi (đã báo ra màn hình), ngược lại cho biết cấu hình lịch học có đổi không.
+async function saveAll() {
   const oldConfig = await getConfig();
   const portalUrl = $("portalUrl").value.trim();
   const workerUrl = $("sync-worker-url").value.trim();
-  if (!isHttps(portalUrl)) return say("Địa chỉ web sinh viên phải bắt đầu bằng https://");
-  if (workerUrl && !isHttps(workerUrl)) return say("Worker URL phải bắt đầu bằng https://");
+  const calEnabled = $("cal-enabled").checked;
+  const calUrl = $("cal-worker-url").value.trim();
+  if (!isHttps(portalUrl)) return fail("Địa chỉ web sinh viên phải bắt đầu bằng https://");
+  if (workerUrl && !isHttps(workerUrl)) return fail("Worker URL phải bắt đầu bằng https://");
+  if (calUrl && !isHttps(calUrl)) return fail("Địa chỉ Worker lịch phải bắt đầu bằng https://");
+  if (calEnabled && !calUrl) return fail("Nhập địa chỉ Worker lịch rồi mới bật được đồng bộ lịch học.");
 
-  const perm = await ensureOriginPermission(portalUrl, oldConfig.cookieSync?.enabled && workerUrl);
-  if (!perm.ok) return say(perm.error);
+  const newCal = { enabled: calEnabled, workerUrl: calUrl, fromDate: $("cal-from").value, toDate: $("cal-to").value };
+  const range = calendarRange(newCal);
+  if (range.error) return fail(range.error);
 
+  const perm = await ensureOriginPermission(portalUrl, oldConfig.cookieSync?.enabled && workerUrl, calEnabled && calUrl);
+  if (!perm.ok) return fail(perm.error);
+
+  const oldCal = calendarSettings(oldConfig);
   const config = {
     ...oldConfig,
     portalUrl,
@@ -122,13 +152,42 @@ $("save").addEventListener("click", async () => {
       workerUrl,
       userName: $("sync-user-name").value.trim(),
     },
+    calendarSync: newCal,
   };
   await chrome.storage.sync.set({ config });
   const hiddenFields = getSelectedHideFields();
   const customHideCSS = $("custom-hide-css").value.trim();
   const hideCSS = buildHideCSS(hiddenFields, customHideCSS);
   await chrome.storage.local.set({ hiddenFields, customHideCSS, hideCSS });
+  return { newCal, calChanged: JSON.stringify(oldCal) !== JSON.stringify(newCal) };
+}
+
+async function syncCalendarNow() {
+  say("Đang đồng bộ lịch học...");
+  const res = await chrome.runtime.sendMessage({ type: "SYNC_CALENDAR", force: true });
+  await renderCalendarStatus();
+  say(res?.ok ? "Đã đồng bộ lịch học." : (res?.error || "Không đồng bộ được lịch học."));
+}
+
+$("save").addEventListener("click", async () => {
+  const saved = await saveAll();
+  if (!saved) return;
   say("Đã lưu. Tải lại trang sv.epu.edu.vn để áp dụng.");
+  if (saved.newCal.enabled && saved.calChanged) await syncCalendarNow();
+});
+
+$("btn-cal-sync").addEventListener("click", async () => {
+  const saved = await saveAll();
+  if (!saved) return;
+  if (!saved.newCal.enabled) return say("Đã lưu. Hãy tick 'Bật đồng bộ lịch học' để đồng bộ.");
+  await syncCalendarNow();
+});
+
+$("btn-cal-copy").addEventListener("click", async () => {
+  const link = $("cal-link").value;
+  if (!link) return say("Chưa có link. Hãy bật và đồng bộ lịch ít nhất một lần.");
+  await navigator.clipboard.writeText(link);
+  say("Đã sao chép link lịch .ics.");
 });
 
 $("reset").addEventListener("click", async () => {

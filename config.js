@@ -13,6 +13,12 @@ const DEFAULT_CONFIG = {
     workerUrl: "",
     userName: "",
   },
+  calendarSync: {
+    enabled: false,
+    workerUrl: "https://epu-calendar-ics.nguyen-viet-thao-25.workers.dev", // Worker lịch (thư mục calendar-worker/)
+    fromDate: "", // yyyy-mm-dd; để trống = hôm nay
+    toDate: "", // yyyy-mm-dd; để trống = 12 tuần sau ngày bắt đầu
+  },
 };
 
 const HIDEABLE_FIELDS = [
@@ -69,4 +75,39 @@ async function ensureOriginPermission(...urls) {
   if (await chrome.permissions.contains({ origins })) return { ok: true };
   const granted = await chrome.permissions.request({ origins });
   return granted ? { ok: true } : { ok: false, error: "Bạn đã từ chối cấp quyền truy cập." };
+}
+
+const isoDate = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const parseIsoDate = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const validIsoDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s) && isoDate(parseIsoDate(s)) === s;
+
+function calendarSettings(config) {
+  const c = { ...DEFAULT_CONFIG.calendarSync, ...(config.calendarSync || {}) };
+  const date = (v) => (validIsoDate(String(v || "")) ? String(v) : "");
+  return {
+    enabled: !!c.enabled,
+    workerUrl: String(c.workerUrl || "").trim(),
+    fromDate: date(c.fromDate),
+    toDate: date(c.toDate),
+  };
+}
+
+// Khoảng ngày cần lấy lịch (gồm cả hai đầu). Trả về { error } nếu không hợp lệ.
+function calendarRange(cal, today = new Date()) {
+  const start = cal.fromDate ? parseIsoDate(cal.fromDate) : new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const end = cal.toDate ? parseIsoDate(cal.toDate) : new Date(start.getFullYear(), start.getMonth(), start.getDate() + 12 * 7);
+  if (end < start) return { error: "Ngày kết thúc phải sau ngày bắt đầu." };
+  if (Math.round((end - start) / 86400000) > 371) return { error: "Khoảng thời gian lấy lịch tối đa 1 năm." };
+  return { start, end, startIso: isoDate(start), endIso: isoDate(end) };
+}
+
+// Link .ics của sinh viên: <địa chỉ Worker>?id=<MSSV>
+function calendarLink(workerUrl, mssv) {
+  if (!isHttps(workerUrl) || !mssv) return "";
+  const u = new URL(workerUrl);
+  u.search = "";
+  u.hash = "";
+  u.searchParams.set("id", mssv);
+  return u.href;
 }
