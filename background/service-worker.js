@@ -13,6 +13,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  if (msg.type === "QR_OPEN_URL") {
+    let url;
+    try { url = new URL(msg.url); } catch { return; }
+    if (url.protocol !== "http:" && url.protocol !== "https:") return;
+    chrome.tabs.create({
+      url: url.href,
+      openerTabId: sender.tab?.id,
+      index: sender.tab ? sender.tab.index + 1 : undefined,
+    });
+    return;
+  }
+
   if (msg.type === "SHOW_TOASTR") {
     const tabId = sender.tab?.id;
     if (!tabId) return;
@@ -67,6 +79,30 @@ async function syncCookies(force = false) {
     return { ok: true, count: cookies.length, response: await res.text() };
   } catch (e) {
     return { ok: false, error: e.message };
+  }
+}
+
+chrome.commands.onCommand.addListener((command, tab) => {
+  if (command === "scan-qr") startQrScan(tab);
+});
+
+async function startQrScan(tab) {
+  try {
+    tab ||= (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+    if (!tab?.id) return;
+    const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ["lib/jsQR.js", "content/qr-scan.js"],
+    });
+    await chrome.tabs.sendMessage(tab.id, { type: "QR_START", dataUrl });
+  } catch (e) {
+    chrome.notifications.create({
+      type: "basic",
+      iconUrl: "icons/icon48.png",
+      title: "Quét QR",
+      message: `Không quét được trên tab này: ${e.message}`,
+    });
   }
 }
 

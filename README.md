@@ -8,6 +8,10 @@ Extension hỗ trợ sinh viên thao tác nhanh trên web sinh viên của trư�
 - Đăng ký tín chỉ nhanh: nhập danh sách mã học phần, extension tự điền và tìm lần lượt.
   Mặc định chỉ điền và tìm; nút "Đăng ký" do sinh viên bấm (hoặc tick tùy chọn tự bấm).
 
+- Quét QR bằng phím tắt **Alt+Q**: chụp màn hình, kéo chọn vùng có mã QR, extension giải mã và xử lý theo loại
+  (liên kết → tự mở tab mới; Wi-Fi, VietQR, email, SĐT, vị trí, văn bản → hiện kết quả kèm nút sao chép/mở).
+  Đổi phím tắt tại `chrome://extensions/shortcuts`.
+
 ## Cài đặt thử
 1. Mở `chrome://extensions` (hoặc `edge://extensions`), bật **Developer mode**.
 2. Chọn **Load unpacked** và trỏ tới thư mục này.
@@ -22,6 +26,8 @@ Extension hỗ trợ sinh viên thao tác nhanh trên web sinh viên của trư�
 - `manifest.json`: khai báo extension
 - `config.js`: cấu hình mặc định, dùng chung
 - `content/content.js`: chạy trên trang web sinh viên (đọc dữ liệu, điền form)
-- `background/service-worker.js`: lưu dữ liệu
+- `content/qr-scan.js`: lớp phủ chọn vùng + giải mã + hiển thị kết quả QR (chèn khi bấm Alt+Q)
+- `lib/jsQR.js`: thư viện giải mã QR (jsQR 1.4.0, Apache-2.0)
+- `background/service-worker.js`: lưu dữ liệu, xử lý phím tắt quét QR
 - `popup/`: giao diện khi bấm biểu tượng (phím tắt Alt+S)
 - `options/`: trang cài đặt

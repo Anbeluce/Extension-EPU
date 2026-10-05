@@ -34,6 +34,10 @@
     "_execute_action": {
       "suggested_key": { "default": "Alt+S" },
       "description": "Mở Trợ lý Sinh viên"
+    },
+    "scan-qr": {
+      "suggested_key": { "default": "Alt+Q" },
+      "description": "Quét mã QR (kéo chọn vùng trên màn hình)"
     }
   }
 }
