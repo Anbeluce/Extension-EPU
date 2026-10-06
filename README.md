@@ -21,9 +21,9 @@ Extension hỗ trợ sinh viên thao tác nhanh trên web sinh viên EPU (`https
 3. Trang Cài đặt tự mở lần đầu: kiểm tra địa chỉ web sinh viên.
 
 ## Quyền và quyền riêng tư
-- Quyền cố định: `storage`, `activeTab`, `scripting`, `cookies`, `notifications`, `alarms` (thử lại đồng bộ lịch) và truy cập `*://sv.epu.edu.vn/*`. Phải giữ cả `http`: cookie đăng nhập `ASC.AUTH` không có cờ Secure nên Chrome tính nó thuộc `http://sv.epu.edu.vn`; nếu chỉ cho `https`, `chrome.cookies` sẽ không thấy cookie và các tính năng cookie (xuất/sửa, đồng bộ) báo như chưa đăng nhập.
+- Quyền cố định: `storage`, `activeTab`, `scripting`, `cookies`, `notifications`, `alarms` (thử lại đồng bộ lịch) và truy cập `*://sv.epu.edu.vn/*`, `*://thanhtoanhocphi.epu.edu.vn/*`. Phải giữ cả `http`: cookie đăng nhập `ASC.AUTH` không có cờ Secure nên Chrome tính nó thuộc `http://sv.epu.edu.vn`; nếu chỉ cho `https`, `chrome.cookies` sẽ không thấy cookie và các tính năng cookie (xuất/sửa, đồng bộ) báo như chưa đăng nhập.
 - Địa chỉ khác (ví dụ Worker đồng bộ cookie, hoặc web sinh viên ở domain khác) là **quyền tùy chọn**: trình duyệt hỏi khi bạn bật đồng bộ hoặc lưu địa chỉ đó trong Cài đặt. Chỉ chấp nhận `https://`.
-- Các content script chỉ chạy trên `https://sv.epu.edu.vn`. Đổi địa chỉ web sinh viên sang domain khác chỉ ảnh hưởng popup và trang tra cứu giảng viên, không bật được content script ở domain đó.
+- Các content script chạy trên `https://sv.epu.edu.vn` và `https://thanhtoanhocphi.epu.edu.vn`; hai site cùng phần mềm nhưng đăng nhập riêng, nên tính năng nào cần đăng nhập thì dùng phiên đăng nhập của chính site đang mở. Cookie, đồng bộ lịch và tra cứu giảng viên (popup/trang riêng) vẫn dùng địa chỉ web sinh viên trong Cài đặt. Đổi địa chỉ web sinh viên sang domain khác chỉ ảnh hưởng popup và trang tra cứu giảng viên, không bật được content script ở domain đó.
 - Dữ liệu lấy từ server luôn được đưa vào trang bằng `textContent`/DOM API (không dùng `innerHTML`); HTML của server (bảng chi tiết nghỉ) được lọc bỏ script và thuộc tính `on*`.
 
 ## Cấu trúc

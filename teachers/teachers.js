@@ -13,7 +13,7 @@ async function apiFetch(path, options = {}) {
 
 // Chưa đăng nhập thì server trả trang HTML đăng nhập thay vì JSON, nên res.json() báo SyntaxError.
 const explain = (e) =>
-  e instanceof SyntaxError ? new Error("Chưa đăng nhập hoặc phiên đã hết hạn. Hãy đăng nhập sv.epu.edu.vn rồi bấm Tải lại dữ liệu.") : e;
+  e instanceof SyntaxError ? new Error("Chưa đăng nhập hoặc phiên đã hết hạn. Hãy đăng nhập web sinh viên rồi bấm Tải lại dữ liệu.") : e;
 
 // --- Data ---
 

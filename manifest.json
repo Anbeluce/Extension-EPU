@@ -5,7 +5,7 @@
   "description": "Tiện ích cho web sinh viên EPU: liên kết nhanh, tra cứu giảng viên, thống kê nghỉ học, quản lý cookie, quét mã QR.",
   "minimum_chrome_version": "121",
   "permissions": ["storage", "activeTab", "scripting", "cookies", "notifications", "alarms"],
-  "host_permissions": ["*://sv.epu.edu.vn/*"],
+  "host_permissions": ["*://sv.epu.edu.vn/*", "*://thanhtoanhocphi.epu.edu.vn/*"],
   "optional_host_permissions": ["https://*/*"],
   "icons": {
     "16": "icons/icon16.png",
@@ -22,12 +22,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://sv.epu.edu.vn/*"],
+      "matches": ["https://sv.epu.edu.vn/*", "https://thanhtoanhocphi.epu.edu.vn/*"],
       "js": ["content/hide-fields.js"],
       "run_at": "document_start"
     },
     {
-      "matches": ["https://sv.epu.edu.vn/*"],
+      "matches": ["https://sv.epu.edu.vn/*", "https://thanhtoanhocphi.epu.edu.vn/*"],
       "js": [
         "shared/dom.js",
         "shared/teachers.js",

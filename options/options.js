@@ -79,7 +79,11 @@ function buildHideCSS(hiddenFields, customCSS) {
 
 async function load() {
   const config = await getConfig();
-  $("portalUrl").value = config.portalUrl;
+  const portal = $("portalUrl");
+  const current = config.portalUrl.replace(/\/+$/, "");
+  // Giá trị tự nhập từ phiên bản cũ (không nằm trong 2 site) vẫn được giữ như một lựa chọn.
+  if (![...portal.options].some((o) => o.value === current)) portal.append(new Option(current, current));
+  portal.value = current;
   currentLinks = [...(config.quickLinks || [])];
   renderLinks();
 
@@ -179,7 +183,7 @@ async function syncCalendarNow() {
 $("save").addEventListener("click", async () => {
   const saved = await saveAll();
   if (!saved) return;
-  say("Đã lưu. Tải lại trang sv.epu.edu.vn để áp dụng.");
+  say("Đã lưu. Tải lại trang web sinh viên để áp dụng.");
   if (saved.newCal.enabled && saved.calChanged) await syncCalendarNow();
 });
 
