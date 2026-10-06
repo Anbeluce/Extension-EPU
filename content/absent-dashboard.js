@@ -49,6 +49,7 @@ function parseAttendanceBySemester(html) {
       const excTd = tds[4];
       const unexTd = tds[5];
       data[sem].push({
+        fullCode,
         code: fullCode.length >= 10 ? fullCode.substring(0, 10) : fullCode,
         name: tds[2].textContent.trim(),
         excused: parseInt(excTd.textContent.trim()) || 0,
@@ -59,6 +60,112 @@ function parseAttendanceBySemester(html) {
     }
   }
   return data;
+}
+
+// Hai loại mã data-bg khác nhau trên web sinh viên:
+// - Mã lớp học phần (một số cho cả môn): lấy từ danh sách "Lớp học phần" có sẵn trên dashboard (khớp theo mã lớp
+//   học phần 12 số, vd 010100086301); không có thì gọi API danh sách lớp học phần của đúng kỳ (iddot) của môn đó,
+//   mỗi kỳ chỉ gọi một lần.
+// - Mã buổi học (mỗi buổi trong lịch tuần một số): lấy từ lịch tuần của đúng tuần có ngày nghỉ, khối lịch trùng
+//   tên môn nằm ở cột ngày nghỉ.
+const lhpByDot = new Map(); // iddot -> Promise<Map<mã lớp học phần 12 số, data-bg>>
+
+function lhpFromLinks(root) {
+  const map = new Map();
+  for (const a of root.querySelectorAll("a[data-bg]")) {
+    const code = a.textContent.trim();
+    if (code) map.set(code, a.dataset.bg);
+  }
+  return map;
+}
+
+function lhpOfDot(iddot) {
+  if (!lhpByDot.has(iddot)) {
+    const request = fetch(`/SinhVien/DanhSachLopHocPhanTheoDot?pIDDot=${encodeURIComponent(iddot)}`, { credentials: "include" })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Lỗi ${res.status}`);
+        return res.text();
+      })
+      .then((html) => lhpFromLinks(new DOMParser().parseFromString(html, "text/html")));
+    request.catch(() => lhpByDot.delete(iddot)); // lỗi mạng thì lần bấm sau thử lại
+    lhpByDot.set(iddot, request);
+  }
+  return lhpByDot.get(iddot);
+}
+
+const normalizeName = (s) => s.replace(/\s+/g, " ").trim().toLowerCase();
+
+const scheduleByWeek = new Map(); // thứ 2 của tuần (dd/mm/yyyy) -> Promise<Document>
+
+const monday = (date) => {
+  const [d, m, y] = date.split("/").map(Number);
+  const mon = new Date(y, m - 1, d - ((new Date(y, m - 1, d).getDay() + 6) % 7));
+  return `${String(mon.getDate()).padStart(2, "0")}/${String(mon.getMonth() + 1).padStart(2, "0")}/${mon.getFullYear()}`;
+};
+
+// Lịch tuần chứa ngày `date` (dd/mm/yyyy), mỗi tuần chỉ gọi một lần.
+function scheduleOfWeek(date) {
+  const key = monday(date);
+  if (!scheduleByWeek.has(key)) {
+    const request = fetch("/SinhVien/GetDanhSachLichTheoTuan", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      credentials: "include",
+      body: new URLSearchParams({ pNgayHienTai: date, pLoaiLich: "0" }),
+    }).then((res) => {
+      if (!res.ok) throw new Error(`Lỗi ${res.status}`);
+      return res.text();
+    }).then((html) => new DOMParser().parseFromString(html, "text/html"));
+    request.catch(() => scheduleByWeek.delete(key));
+    scheduleByWeek.set(key, request);
+  }
+  return scheduleByWeek.get(key);
+}
+
+// Mã buổi học của môn `name` vào ngày `date`: ô lịch nằm ở cột có đúng ngày đó, có thể có nhiều buổi trong ngày.
+async function sessionsOnDate(name, date) {
+  const doc = await scheduleOfWeek(date);
+  const columns = [...doc.querySelectorAll("thead th")].map((th) => th.textContent.match(/\d{2}\/\d{2}\/\d{4}/)?.[0]);
+  const wanted = normalizeName(name);
+  const found = [];
+  for (const tr of doc.querySelectorAll("tbody tr")) {
+    [...tr.children].forEach((td, i) => {
+      if (columns[i] !== date) return;
+      for (const block of td.querySelectorAll(".color-lichhoc[data-bg]")) {
+        const a = block.querySelector("a");
+        if (a && normalizeName(a.textContent) === wanted) found.push(block.dataset.bg);
+      }
+    });
+  }
+  return found;
+}
+
+// Các ngày dd/mm/yyyy xuất hiện trong bảng chi tiết nghỉ, bỏ trùng.
+function datesInText(text) {
+  const found = new Set();
+  for (const m of text.matchAll(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/g)) {
+    found.add(`${m[1].padStart(2, "0")}/${m[2].padStart(2, "0")}/${m[3]}`);
+  }
+  return [...found];
+}
+
+// Trả về mã lớp học phần hoặc null nếu không tìm được. Kết quả tìm thấy được nhớ lại trong c.lhp.
+async function resolveLhp(c) {
+  if (c.lhp) return c.lhp;
+  const fromPage = lhpFromLinks(document).get(c.fullCode);
+  if (fromPage) return (c.lhp = fromPage);
+
+  if (c.iddot) {
+    try {
+      const fromApi = (await lhpOfDot(c.iddot)).get(c.fullCode);
+      if (fromApi) return (c.lhp = fromApi);
+    } catch { /* thử nguồn tiếp theo */ }
+  }
+
+  return null;
 }
 
 async function runAbsentDashboard() {
@@ -99,7 +206,7 @@ function renderAbsentDashboard(semData, semesters, errorMsg) {
   const header = h("div", {
     style: "background:#1d4ed8;color:#fff;padding:10px 14px;font-weight:600;display:flex;" +
       "justify-content:space-between;align-items:center;cursor:pointer;font-size:14px",
-  }, h("span", {}, "Thống kê % nghỉ học"), toggle);
+  }, h("span", {}, "Thống kê phần trăm nghỉ học"), toggle);
   const content = h("div", { id: "tl-sv-absent-content", style: "padding:12px;max-height:380px;overflow-y:auto" });
   const wrap = h("div", {
     id: "tl-sv-absent",
@@ -145,6 +252,33 @@ function renderAbsentDashboard(semData, semesters, errorMsg) {
   });
   wrap.append(detailPanel);
 
+  // Thêm hai cột vào bảng chi tiết nghỉ: mã lớp học phần (cả môn) và mã buổi học trong lịch tuần (từng ngày nghỉ).
+  // Ô hiện "…" trước, tra xong mới điền, nên bảng chi tiết không phải chờ.
+  function addBgColumns(c) {
+    const table = detailPanel.querySelector("table");
+    const rows = table ? [...table.querySelectorAll("tbody tr")] : [];
+    if (!rows.length) return;
+    table.querySelector("thead th[colspan]")?.setAttribute("colspan", "6");
+    table.querySelector("thead tr:last-child").append(
+      h("th", { title: "data-bg của lớp học phần (dashboard/API)" }, "Mã LHP"),
+      h("th", { title: "data-bg của buổi học trong lịch tuần" }, "Mã buổi học"));
+
+    const fail = (cell, e) => { cell.textContent = "lỗi"; cell.title = e.message; };
+    const lhpCells = [];
+    for (const tr of rows) {
+      const lhpCell = h("td", { class: "text-center" }, "…");
+      const sessionCell = h("td", { class: "text-center" }, "…");
+      tr.append(lhpCell, sessionCell);
+      lhpCells.push(lhpCell);
+      const date = datesInText(tr.children[1]?.textContent || "")[0];
+      if (!date) { sessionCell.textContent = "—"; continue; }
+      sessionsOnDate(c.name, date)
+        .then((ids) => { sessionCell.textContent = ids.join(", ") || "—"; })
+        .catch((e) => fail(sessionCell, e));
+    }
+    resolveLhp(c).then((id) => lhpCells.forEach((cell) => { cell.textContent = id || "—"; }));
+  }
+
   async function showDetail(c) {
     if (!c.iddot || !c.mamonhoc || c.absent === 0) return;
     detailPanel.style.display = "block";
@@ -163,6 +297,7 @@ function renderAbsentDashboard(semData, semesters, errorMsg) {
             onclick: () => { detailPanel.style.display = "none"; },
           }, "✕")),
         h("div", {}, ...sanitizedNodes(html)));
+      addBgColumns(c);
       const dtable = detailPanel.querySelector("table");
       if (dtable) dtable.style.cssText = "width:100%;border-collapse:collapse;font-size:11px";
       for (const td of detailPanel.querySelectorAll("td,th")) {
