@@ -93,7 +93,6 @@ async function load() {
 
   $("uncheck-worker-url").value = config.uncheckAttendance?.workerUrl || "";
   $("sync-worker-url").value = config.cookieSync?.workerUrl || "";
-  $("sync-user-name").value = config.cookieSync?.userName || "";
 
   const cal = calendarSettings(config);
   $("cal-enabled").checked = cal.enabled;
@@ -107,14 +106,18 @@ async function load() {
 
 async function renderCalendarStatus() {
   const cal = calendarSettings(await getConfig());
-  const { calendarStatus, calendarSyncedAt, studentMSSV } =
-    await chrome.storage.local.get(["calendarStatus", "calendarSyncedAt", "studentMSSV"]);
+  const { studentMSSV, calendarStatus } =
+    await chrome.storage.local.get(["studentMSSV", "calendarStatus"]);
+  const kStatus = studentMSSV ? `cal_status_${studentMSSV}` : null;
+  const kAt = studentMSSV ? `cal_at_${studentMSSV}` : null;
+  const perStudent = kStatus ? await chrome.storage.local.get([kStatus, kAt]) : {};
+  const status = perStudent[kStatus] || calendarStatus;
   const el = $("cal-status");
-  el.textContent = calendarStatus
-    ? `${calendarStatus.message} (${new Date(calendarStatus.at).toLocaleString("vi-VN")})`
+  el.textContent = status
+    ? `${status.message} (${new Date(status.at).toLocaleString("vi-VN")})`
     : "Chưa đồng bộ lần nào.";
-  el.classList.toggle("error", !!calendarStatus && !calendarStatus.ok);
-  $("cal-link").value = calendarSyncedAt ? calendarLink(cal.workerUrl, studentMSSV) : "";
+  el.classList.toggle("error", !!status && !status.ok);
+  $("cal-link").value = perStudent[kAt] ? calendarLink(cal.workerUrl, studentMSSV) : "";
 }
 
 $("btn-add-link").addEventListener("click", () => {
@@ -164,7 +167,6 @@ async function saveAll() {
     cookieSync: {
       ...(oldConfig.cookieSync || {}),
       workerUrl,
-      userName: $("sync-user-name").value.trim(),
     },
     uncheckAttendance: { workerUrl: uncheckUrl },
     calendarSync: newCal,

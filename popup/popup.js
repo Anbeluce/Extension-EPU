@@ -188,13 +188,16 @@ async function loadSyncState() {
   const config = await getConfig();
   const { cookieSync } = config;
   $("sync-toggle").checked = !!cookieSync?.enabled;
-  if (!cookieSync?.workerUrl || !cookieSync?.userName) {
-    setSyncStatus("Chưa cấu hình. Vào Cài đặt để nhập Worker URL và MSSV.", true);
+  if (!cookieSync?.workerUrl) {
+    setSyncStatus("Chưa cấu hình. Vào Cài đặt để nhập Worker URL.", true);
     return;
   }
-  const { cookieSyncedAt } = await chrome.storage.local.get("cookieSyncedAt");
-  if (cookieSyncedAt) {
-    setSyncStatus("Lần sync gần nhất: " + new Date(cookieSyncedAt).toLocaleString("vi-VN"));
+  const { studentMSSV } = await chrome.storage.local.get("studentMSSV");
+  if (!studentMSSV) return;
+  const syncKey = `cookieSync_${studentMSSV}`;
+  const syncResult = await chrome.storage.local.get(syncKey);
+  if (syncResult[syncKey]) {
+    setSyncStatus("Lần sync gần nhất: " + new Date(syncResult[syncKey]).toLocaleString("vi-VN"));
   }
 }
 
@@ -239,8 +242,10 @@ async function loadCalendarState() {
 
 $("btn-cal-copy").addEventListener("click", async () => {
   const cal = calendarSettings(await getConfig());
-  const { studentMSSV, calendarSyncedAt } = await chrome.storage.local.get(["studentMSSV", "calendarSyncedAt"]);
-  const link = calendarSyncedAt ? calendarLink(cal.workerUrl, studentMSSV) : "";
+  const { studentMSSV } = await chrome.storage.local.get("studentMSSV");
+  const kAt = studentMSSV ? `cal_at_${studentMSSV}` : null;
+  const hasSynced = kAt ? (await chrome.storage.local.get(kAt))[kAt] : null;
+  const link = hasSynced ? calendarLink(cal.workerUrl, studentMSSV) : "";
   if (!link) return setCalStatus("Chưa có link. Hãy bật và đồng bộ lịch ít nhất một lần.", true);
   await navigator.clipboard.writeText(link);
   setCalStatus("Đã sao chép link lịch .ics.");
@@ -276,13 +281,50 @@ $("hide-toggle").addEventListener("change", async () => {
 
 $("btn-hide-settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
 
+// --- Version check ---
+
+function showVersion() {
+  const ver = chrome.runtime.getManifest().version;
+  $("version-badge").textContent = `v${ver}`;
+}
+
+async function checkForUpdate() {
+  const current = chrome.runtime.getManifest().version;
+  try {
+    const res = await fetch(
+      "https://raw.githubusercontent.com/Anbeluce/Extension-EPU/main/manifest.json",
+      { cache: "no-store" }
+    );
+    if (!res.ok) return;
+    const remote = await res.json();
+    const latest = remote.version;
+    if (latest && compareVersions(latest, current) > 0) {
+      $("update-text").textContent = `Có phiên bản mới: v${latest}`;
+      $("update-link").href = "https://github.com/Anbeluce/Extension-EPU/releases";
+      $("update-bar").style.display = "block";
+    }
+  } catch {}
+}
+
+function compareVersions(a, b) {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
 // --- Khởi tạo ---
 
 (async () => {
   const { studentName } = await chrome.storage.local.get("studentName");
   renderGreeting(studentName);
+  showVersion();
   renderLinks();
   loadSyncState();
   loadCalendarState();
   loadHideState();
+  checkForUpdate();
 })();

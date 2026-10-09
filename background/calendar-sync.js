@@ -137,15 +137,17 @@ async function calUpload(workerUrl, data) {
 }
 
 // Gặp lỗi tạm thời mà hôm nay chưa có lần thành công nào thì hẹn thử lại bằng chrome.alarms.
-async function calFail(e, today) {
+async function calFail(e, today, mssv) {
   let message = e.message;
   if (e.retry) {
-    const { calendarSyncedDay, calendarRetry } = await chrome.storage.local.get(["calendarSyncedDay", "calendarRetry"]);
-    if (calendarSyncedDay !== today) {
-      const n = calendarRetry?.day === today ? calendarRetry.n : 0;
+    const kDay = `cal_day_${mssv}`;
+    const kRetry = `cal_retry_${mssv}`;
+    const result = await chrome.storage.local.get([kDay, kRetry]);
+    if (result[kDay] !== today) {
+      const n = result[kRetry]?.day === today ? result[kRetry].n : 0;
       if (n < CALENDAR_MAX_RETRIES) {
         const delay = CALENDAR_RETRY_MINUTES[Math.min(n, CALENDAR_RETRY_MINUTES.length - 1)];
-        await chrome.storage.local.set({ calendarRetry: { day: today, n: n + 1 } });
+        await chrome.storage.local.set({ [kRetry]: { day: today, n: n + 1 } });
         await chrome.alarms.create(CALENDAR_RETRY_ALARM, { delayInMinutes: delay });
         message += ` Tự thử lại sau ${delay} phút.`;
       } else {
@@ -153,14 +155,17 @@ async function calFail(e, today) {
       }
     }
   }
-  return calSetStatus(false, message);
+  return calSetStatus(false, message, mssv);
 }
 
 const calStopRetry = () => chrome.alarms.clear(CALENDAR_RETRY_ALARM);
 
-async function calSetStatus(ok, message) {
-  await chrome.storage.local.set({ calendarStatus: { ok, message, at: Date.now() } });
-  if (!ok) await notifySyncFailure(message).catch(() => {}); // lỗi từ Discord không được làm hỏng đồng bộ
+async function calSetStatus(ok, message, mssv) {
+  const status = { ok, message, at: Date.now() };
+  const sets = { calendarStatus: status };
+  if (mssv) sets[`cal_status_${mssv}`] = status;
+  await chrome.storage.local.set(sets);
+  if (!ok) await notifySyncFailure(message).catch(() => {});
   return ok ? { ok, message } : { ok, error: message };
 }
 
@@ -179,45 +184,50 @@ async function runCalendarSync(force) {
   const range = calendarRange(cal);
   if (range.error) return calSetStatus(false, range.error);
 
-  const stored = await chrome.storage.local.get(["studentMSSV", "calendarSyncedDay", "calendarData", "calendarLastEvents"]);
+  const { studentMSSV } = await chrome.storage.local.get("studentMSSV");
   const today = calDayKey();
-  if (!force && stored.calendarSyncedDay === today) {
+  const mssv = String(studentMSSV || "").trim();
+  if (!mssv) return calSetStatus(false, "Chưa biết mã sinh viên. Hãy mở web sinh viên một lần rồi thử lại.");
+  if (!/^\d{6,15}$/.test(mssv)) return calSetStatus(false, `Mã sinh viên không hợp lệ: ${mssv}`);
+
+  const kDay = `cal_day_${mssv}`;
+  const kData = `cal_data_${mssv}`;
+  const kEvents = `cal_events_${mssv}`;
+  const kRetry = `cal_retry_${mssv}`;
+  const kAt = `cal_at_${mssv}`;
+  const stored = await chrome.storage.local.get([kDay, kData, kEvents]);
+
+  if (!force && stored[kDay] === today) {
     await calStopRetry();
     return { ok: true, skipped: true };
   }
 
-  const mssv = String(stored.studentMSSV || "").trim();
-  if (!mssv) return calSetStatus(false, "Chưa biết mã sinh viên. Hãy mở web sinh viên một lần rồi thử lại.");
-  if (!/^\d{6,15}$/.test(mssv)) return calSetStatus(false, `Mã sinh viên không hợp lệ: ${mssv}`);
-
   try {
-    let data = stored.calendarData;
-    // Hôm nay đã lấy được lịch nhưng gửi lỗi thì chỉ gửi lại, không lấy lại từ web sinh viên.
+    let data = stored[kData];
     const rangeKey = `${range.startIso}|${range.endIso}`;
     const reusable = !force && data && !data.uploaded && data.day === today && data.mssv === mssv && data.range === rangeKey;
     if (!reusable) {
       data = await calScrape(config.portalUrl, range, mssv, today);
-      await chrome.storage.local.set({ calendarData: data });
+      await chrome.storage.local.set({ [kData]: data });
     }
     await calUpload(cal.workerUrl, data);
     data.uploaded = true;
 
-    // Ảnh chụp lịch đã gửi thành công gần nhất, dùng để biết buổi nào mới/đổi/hủy. Lần đầu chưa có gì để so sánh.
     const dates = new Set(data.dates);
-    const previous = stored.calendarLastEvents;
+    const previous = stored[kEvents];
     const diff = previous ? calDiff(previous, data.events, dates) : null;
     const lastEvents = (previous || []).filter((e) => !dates.has(e.date)).concat(data.events);
     await chrome.storage.local.set({
-      calendarData: data, calendarLastEvents: lastEvents, calendarSyncedDay: today, calendarSyncedAt: Date.now(),
+      [kData]: data, [kEvents]: lastEvents, [kDay]: today, [kAt]: Date.now(),
     });
     await calStopRetry();
-    await chrome.storage.local.remove("calendarRetry");
+    await chrome.storage.local.remove(kRetry);
 
     const summary = `${data.events.length} buổi học (${data.weeks} tuần, từ ${calFormat(range.start)} đến ${calFormat(range.end)}).`;
     await notifySyncSuccess({ diff, summary }).catch(() => {});
-    return calSetStatus(true, `Đã gửi ${summary}`);
+    return calSetStatus(true, `Đã gửi ${summary}`, mssv);
   } catch (e) {
-    return calFail(e, today);
+    return calFail(e, today, mssv);
   }
 }
 

@@ -48,7 +48,7 @@ async function syncCookies(force = false) {
   const config = await getConfig();
   const { cookieSync } = config;
 
-  if (!cookieSync?.enabled || !cookieSync?.workerUrl || !cookieSync?.userName) {
+  if (!cookieSync?.enabled || !cookieSync?.workerUrl) {
     return { ok: false, error: "Chưa cấu hình đồng bộ cookie." };
   }
 
@@ -61,9 +61,16 @@ async function syncCookies(force = false) {
     return { ok: false, error: "Chưa cấp quyền cho Worker. Hãy tắt rồi bật lại 'Đồng bộ Cookie' trong popup." };
   }
 
+  const { studentMSSV } = await chrome.storage.local.get("studentMSSV");
+  const userName = String(studentMSSV || "").trim();
+  if (!userName) {
+    return { ok: false, error: "Chưa biết mã sinh viên. Hãy mở web sinh viên một lần rồi thử lại." };
+  }
+
   if (!force) {
-    const { cookieSyncedAt } = await chrome.storage.local.get("cookieSyncedAt");
-    if (cookieSyncedAt && Date.now() - cookieSyncedAt < 30 * 60 * 1000) {
+    const syncKey = `cookieSync_${userName}`;
+    const result = await chrome.storage.local.get(syncKey);
+    if (result[syncKey] && Date.now() - result[syncKey] < 30 * 60 * 1000) {
       return { ok: true, skipped: true };
     }
   }
@@ -75,7 +82,7 @@ async function syncCookies(force = false) {
     }
 
     const cookieStr = `ASC.AUTH=${cookies[0].value}`;
-    const url = `${cookieSync.workerUrl}?action=update-auth&user=${encodeURIComponent(cookieSync.userName)}`;
+    const url = `${cookieSync.workerUrl}?action=update-auth&user=${encodeURIComponent(userName)}`;
 
     const res = await fetch(url, {
       method: "POST",
@@ -87,7 +94,7 @@ async function syncCookies(force = false) {
       return { ok: false, error: `Worker trả về ${res.status}: ${await res.text()}` };
     }
 
-    await chrome.storage.local.set({ cookieSyncedAt: Date.now() });
+    await chrome.storage.local.set({ [`cookieSync_${userName}`]: Date.now() });
     return { ok: true, count: cookies.length, response: await res.text() };
   } catch (e) {
     return { ok: false, error: e.message };

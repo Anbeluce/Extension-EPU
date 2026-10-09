@@ -11,7 +11,6 @@ const DEFAULT_CONFIG = {
   cookieSync: {
     enabled: false,
     workerUrl: "",
-    userName: "",
   },
   calendarSync: {
     enabled: false,
