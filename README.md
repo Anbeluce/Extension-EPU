@@ -1,62 +1,110 @@
-# EPU Extension (Chrome/Edge/Firefox, Manifest V3)
+# EPU Extension
 
-Extension hỗ trợ sinh viên thao tác nhanh trên web sinh viên EPU (`https://sv.epu.edu.vn`).
+Tiện ích trình duyệt (Chrome / Edge / Cốc Cốc / Firefox, Manifest V3) giúp sinh viên Đại học Điện lực (EPU) thao tác nhanh hơn trên web sinh viên `https://sv.epu.edu.vn` và `https://thanhtoanhocphi.epu.edu.vn`: liên kết nhanh, thống kê nghỉ học, tra cứu giảng viên, đồng bộ lịch học ra `.ics`, quản lý cookie, ẩn thông tin cá nhân và quét mã QR.
+
+> Extension chưa lên Chrome Web Store, cài thủ công theo hướng dẫn bên dưới. Cài xong, mở popup sẽ thấy **số phiên bản** và được **tự báo khi có bản mới** trên GitHub.
+
+## Ảnh minh họa
+
+> Các ảnh nằm trong thư mục [`screenshots/`](screenshots/). Nếu đang thấy ảnh vỡ nghĩa là chưa có file — xem [screenshots/README.md](screenshots/README.md) để biết cần chụp gì.
+
+| Popup | Trang cài đặt |
+|---|---|
+| ![Popup](screenshots/popup.png) | ![Cài đặt](screenshots/options.png) |
 
 ## Tính năng
-- Liên kết nhanh tới các trang hay dùng (TKB, điểm, đăng ký tín chỉ...).
-- Tra cứu giảng viên (trang riêng, mở từ popup; có nút Cài đặt ở góc trên).
-- Thống kê % nghỉ học ngay trên trang dashboard của web sinh viên; tự kiểm tra điểm danh và báo khi có thay đổi.
-- Đồng bộ lịch học tự động: khi mở trình duyệt (tối đa 1 lần thành công mỗi ngày), extension tự lấy lịch theo tuần từ web sinh viên bằng cookie đăng nhập có sẵn của trình duyệt, lưu vào bộ nhớ cục bộ rồi gửi lên Worker lịch (MSSV tự lấy). Worker đổi sang `.ics`; mở `<địa chỉ Worker>/?id=<MSSV>` để đăng ký lịch vào Google Calendar/Outlook/điện thoại. Người dùng chọn khoảng "từ ngày … đến ngày …" (tối đa 1 năm) trong Cài đặt; để trống thì lấy từ hôm nay đến 12 tuần sau. Extension lấy và gửi trọn từng tuần chạm vào khoảng đó; Worker đè lại tuần nào được gửi (buổi bị hủy/đổi trong tuần đó biến mất), các tuần khác giữ nguyên và Worker không tự xóa dữ liệu cũ. Lỗi tạm thời (mất mạng, web sinh viên hoặc Worker báo lỗi 5xx) thì tự thử lại sau 1, 5, 15, 30 rồi mỗi 60 phút (tối đa 12 lần mỗi ngày, dùng `chrome.alarms`); lỗi cần người dùng xử lý (chưa đăng nhập, chưa biết MSSV...) thì không thử lại mà chờ lần mở trình duyệt/vào web sinh viên tiếp theo; nút "Đồng bộ ngay" ở popup/Cài đặt để chạy tay.
-- Thông báo qua webhook Discord (tùy chọn, mỗi người tự dán link trong Cài đặt): **mọi lần đồng bộ lịch học** đều gửi một tin để biết, gồm thành công (kèm lịch có thay đổi gì: thêm/hủy buổi, đổi phòng/giảng viên/giờ, hoặc "không có thay đổi"), thất bại kèm lý do, và cả mỗi lần tự thử lại. Extension tự so sánh lịch mới với lần trước rồi gửi thẳng tới Discord; link webhook chỉ lưu trong trình duyệt (`chrome.storage.local`), Worker không biết gì về nó.
-- Xem/sửa/nhập/xuất cookie.
-- Đồng bộ cookie đăng nhập lên Cloudflare Worker của bạn (tắt mặc định, cần cấp quyền khi bật). Chỉ dùng cho cá nhân, không cần cho đồng bộ lịch học ở trên.
-- Ẩn thông tin cá nhân trên trang (họ tên, MSSV, CCCD...) theo lựa chọn trong Cài đặt.
-- Quét QR bằng phím tắt **Alt+Q**: chụp màn hình, kéo chọn vùng có mã QR, extension giải mã và xử lý theo loại
-  (liên kết → tự mở tab mới; Wi-Fi, VietQR, email, SĐT, vị trí, văn bản → hiện kết quả kèm nút sao chép/mở).
-  Đổi phím tắt tại `chrome://extensions/shortcuts`.
 
-## Cài đặt thử
-1. Mở `chrome://extensions` (hoặc `edge://extensions`), bật **Developer mode**.
-2. Chọn **Load unpacked** và trỏ tới thư mục này.
-3. Trang Cài đặt tự mở lần đầu: kiểm tra địa chỉ web sinh viên.
+### Liên kết nhanh
+Popup có sẵn các nút mở nhanh những trang hay dùng (Trang chủ, Thời khóa biểu, Xem điểm, Đăng ký tín chỉ…). Danh sách liên kết sửa được trong trang Cài đặt — thêm/xóa tùy ý, đường dẫn tương đối sẽ tự ghép với địa chỉ web sinh viên đang chọn.
+
+### Thống kê % nghỉ học
+Ngay trên trang điểm danh của web sinh viên, extension chèn thêm cột **phần trăm đã nghỉ** cho từng môn (tính theo số tiết nghỉ trên tổng số tiết), giúp bạn thấy nhanh môn nào sắp chạm ngưỡng cấm thi. Bấm vào số buổi nghỉ để xem bảng chi tiết từng buổi.
+
+![Thống kê nghỉ học](screenshots/absent-dashboard.png)
+
+### Tự kiểm tra điểm danh & báo thay đổi
+Extension tự đọc trang điểm danh (tối đa 30 phút một lần) và **lưu lại theo từng MSSV**. Khi số buổi nghỉ (có phép / không phép) của môn nào đó thay đổi, nó hiện thông báo nổi ngay trên trang để bạn biết liền, không phải tự vào dò.
+
+![Thông báo điểm danh](screenshots/attendance-notification.png)
+
+### Tra cứu giảng viên
+Trang riêng mở từ popup, cho tra cứu nhanh thông tin giảng viên. Danh sách được tải sẵn nền khi bạn vào web sinh viên nên tra cứu tức thì. Trang có nút Cài đặt ở góc trên.
+
+![Tra cứu giảng viên](screenshots/teachers.png)
+
+### Đồng bộ lịch học ra `.ics` (tự động)
+Bật trong Cài đặt. Khi mở trình duyệt (tối đa **1 lần thành công mỗi ngày**), extension tự lấy lịch học theo tuần từ web sinh viên bằng chính cookie đăng nhập có sẵn, rồi tạo ra một link lịch `.ics`. Thêm link đó vào **Google Calendar / Outlook / lịch điện thoại** để lịch học tự cập nhật trên mọi thiết bị.
+
+![Lịch học](screenshots/calendar.png)
+
+Chi tiết hoạt động:
+- **Khoảng ngày**: chọn "từ ngày … đến ngày …" trong Cài đặt (tối đa 1 năm). Để trống thì lấy từ hôm nay đến 12 tuần sau.
+- **Cập nhật từng tuần**: lịch cập nhật theo từng tuần chạm vào khoảng đã chọn; tuần nào được đồng bộ lại thì làm mới hoàn toàn (buổi bị hủy/đổi trong tuần đó biến mất), các tuần khác giữ nguyên.
+- **Tự thử lại**: lỗi tạm thời (mất mạng, server báo 5xx) sẽ tự thử lại sau 1, 5, 15, 30 rồi mỗi 60 phút (tối đa 12 lần/ngày, dùng `chrome.alarms`). Lỗi cần bạn xử lý (chưa đăng nhập, chưa biết MSSV…) thì không thử lại mà đợi lần mở trình duyệt / vào web sinh viên tiếp theo.
+- **MSSV tự lấy** từ web sinh viên, không cần nhập. Dữ liệu lịch lưu riêng theo từng MSSV nên đổi tài khoản không bị lẫn.
+- Nút **Đồng bộ ngay** ở popup / Cài đặt để chạy tay bất cứ lúc nào.
+
+### Thông báo qua webhook Discord (tùy chọn)
+Dán link webhook Discord trong Cài đặt là **mỗi lần đồng bộ lịch** đều được gửi một tin về kênh Discord: thành công (kèm thay đổi gì — thêm/hủy buổi, đổi phòng/giảng viên/giờ, hoặc "không có thay đổi"), thất bại kèm lý do, và cả mỗi lần tự thử lại. Link webhook là bí mật nên chỉ lưu trong trình duyệt (`chrome.storage.local`), **không gửi đi đâu khác**.
+
+### Quản lý cookie
+Trong popup có thể **xuất / sao chép / nhập / sửa / xóa** cookie của web sinh viên — tiện khi cần sao lưu phiên đăng nhập hoặc chuyển sang thiết bị/trình duyệt khác.
+
+### Ẩn thông tin cá nhân
+Chọn trong Cài đặt những trường muốn ẩn khỏi trang web sinh viên (họ tên, MSSV, CCCD, số tài khoản…) — tiện khi quay màn hình, chụp ảnh hỏi bài hay chia sẻ màn hình. Bật/tắt nhanh ngay trong popup. Có ô CSS tùy chỉnh để ẩn thêm phần tử bất kỳ.
+
+![Ẩn thông tin](screenshots/hide-fields.png)
+
+### Quét mã QR bằng phím tắt
+Nhấn **Alt+Q**: extension chụp màn hình, cho bạn kéo chọn vùng chứa mã QR, rồi giải mã và xử lý theo loại:
+- **Liên kết** → tự mở tab mới.
+- **Wi-Fi, VietQR, email, số điện thoại, vị trí, văn bản** → hiện kết quả kèm nút sao chép / mở.
+
+Đổi phím tắt tại `chrome://extensions/shortcuts`.
+
+![Quét QR](screenshots/qr-scan.png)
+
+## Cài đặt
+
+Extension cài thủ công ở **chế độ nhà phát triển** (chưa có trên store).
+
+### Chrome / Edge / Cốc Cốc
+1. Tải mã nguồn: trên GitHub bấm **Code → Download ZIP** rồi giải nén (hoặc `git clone`). Nhớ thư mục chứa file `manifest.json`.
+2. Mở trang tiện ích: `chrome://extensions` (Edge: `edge://extensions`; Cốc Cốc: `coccoc://extensions`).
+3. Bật **Chế độ nhà phát triển** (Developer mode) ở góc trên bên phải.
+4. Bấm **Tải tiện ích đã giải nén** (Load unpacked) và trỏ tới thư mục vừa giải nén.
+5. Extension xuất hiện; trang Cài đặt tự mở lần đầu — kiểm tra địa chỉ web sinh viên. Ghim icon lên thanh công cụ cho tiện dùng.
+
+### Firefox
+Mở `about:debugging` → **This Firefox** → **Load Temporary Add-on** → chọn file `manifest.json`. (Bản nạp tạm sẽ mất khi đóng Firefox.)
+
+### Cập nhật
+Mở popup sẽ thấy phiên bản hiện tại; nếu có bản mới trên GitHub, popup hiện thanh báo kèm nút dẫn tới trang tải. Tải bản mới rồi làm lại bước Load unpacked (hoặc bấm nút nạp lại ở trang tiện ích).
 
 ## Quyền và quyền riêng tư
-- Quyền cố định: `storage`, `activeTab`, `scripting`, `cookies`, `notifications`, `alarms` (thử lại đồng bộ lịch) và truy cập `*://sv.epu.edu.vn/*`, `*://thanhtoanhocphi.epu.edu.vn/*`. Phải giữ cả `http`: cookie đăng nhập `ASC.AUTH` không có cờ Secure nên Chrome tính nó thuộc `http://sv.epu.edu.vn`; nếu chỉ cho `https`, `chrome.cookies` sẽ không thấy cookie và các tính năng cookie (xuất/sửa, đồng bộ) báo như chưa đăng nhập.
-- Địa chỉ khác (ví dụ Worker đồng bộ cookie, hoặc web sinh viên ở domain khác) là **quyền tùy chọn**: trình duyệt hỏi khi bạn bật đồng bộ hoặc lưu địa chỉ đó trong Cài đặt. Chỉ chấp nhận `https://`.
-- Các content script chạy trên `https://sv.epu.edu.vn` và `https://thanhtoanhocphi.epu.edu.vn`; hai site cùng phần mềm nhưng đăng nhập riêng, nên tính năng nào cần đăng nhập thì dùng phiên đăng nhập của chính site đang mở. Cookie, đồng bộ lịch và tra cứu giảng viên (popup/trang riêng) vẫn dùng địa chỉ web sinh viên trong Cài đặt. Đổi địa chỉ web sinh viên sang domain khác chỉ ảnh hưởng popup và trang tra cứu giảng viên, không bật được content script ở domain đó.
-- Dữ liệu lấy từ server luôn được đưa vào trang bằng `textContent`/DOM API (không dùng `innerHTML`); HTML của server (bảng chi tiết nghỉ) được lọc bỏ script và thuộc tính `on*`.
+- **Quyền cố định**: `storage`, `activeTab`, `scripting`, `cookies`, `notifications`, `alarms` (dùng cho việc thử lại đồng bộ lịch) và truy cập `*://sv.epu.edu.vn/*`, `*://thanhtoanhocphi.epu.edu.vn/*`. Phải giữ cả `http`: cookie đăng nhập `ASC.AUTH` không có cờ Secure nên Chrome xếp nó thuộc `http://sv.epu.edu.vn`; nếu chỉ cho `https`, `chrome.cookies` sẽ không thấy cookie và các tính năng cookie báo như chưa đăng nhập.
+- **Quyền tùy chọn**: các địa chỉ khác (máy chủ đồng bộ lịch, hoặc web sinh viên ở domain khác) chỉ được xin khi bạn bật tính năng hoặc lưu địa chỉ đó trong Cài đặt. Chỉ chấp nhận `https://`.
+- Content script chỉ chạy trên `https://sv.epu.edu.vn` và `https://thanhtoanhocphi.epu.edu.vn`. Hai site cùng phần mềm nhưng đăng nhập riêng; tính năng nào cần đăng nhập thì dùng phiên của chính site đang mở.
+- **An toàn dữ liệu**: dữ liệu lấy từ server luôn được đưa vào trang bằng `textContent` / DOM API (không dùng `innerHTML`); HTML của server (bảng chi tiết nghỉ) được lọc bỏ `script` và thuộc tính `on*`. Link webhook Discord và dữ liệu cá nhân (lịch, điểm danh, cookie) chỉ lưu trong `chrome.storage.local` của trình duyệt bạn.
 
-## Cấu trúc
-- `manifest.json`: khai báo extension
-- `config.js`: cấu hình mặc định và hàm dùng chung cho các trang extension (popup, cài đặt, tra cứu giảng viên, service worker)
-- `shared/`: mã dùng chung cho content script và trang tra cứu giảng viên (`dom.js` dựng DOM an toàn, `teachers.js` logic giảng viên)
-- `content/`: chạy trên trang web sinh viên, mỗi file một tính năng
-  - `student-info.js` (đọc MSSV/họ tên), `attendance.js` (kiểm tra điểm danh), `absent-dashboard.js` (thống kê % nghỉ), `teachers.js` (tải sẵn danh sách giảng viên), `hide-fields.js` (ẩn thông tin)
-  - `main.js`: khởi động các tác vụ nền (nạp sau cùng, thứ tự nạp khai báo trong `manifest.json`)
-  - `qr-scan.js`: lớp phủ chọn vùng + giải mã + hiển thị kết quả QR (chèn khi bấm Alt+Q)
-- `lib/jsQR.js`: thư viện giải mã QR (jsQR 1.4.0, Apache-2.0, kèm file license)
-- `background/service-worker.js`: đồng bộ cookie, mở tab từ QR, xử lý phím tắt, chạy đồng bộ lịch khi mở trình duyệt (`onStartup`)
-- `background/webhook.js`: so sánh lịch cũ/mới và gửi thông báo Discord
-- `background/calendar-sync.js`: lấy lịch từng tuần từ web sinh viên, lưu `chrome.storage.local`, gửi lên Worker lịch
-- `calendar-worker/`: Cloudflare Worker nhận lịch từ extension, đổi sang `.ics`, lưu KV, trả `.ics` theo `?id=<MSSV>` (không đóng gói vào extension, xem mục dưới)
-- `popup/` (cookie, đồng bộ, ẩn thông tin, liên kết nhanh), `options/` (trang cài đặt), `teachers/` (trang tra cứu giảng viên)
-- `icons/`: icon 16/32/48/128
-- `tools/`: công cụ cho người phát triển, **không** đóng gói vào extension (`package.ps1`, `logo-source.png` là logo gốc 818px để tạo lại icon)
-- `html/`, `.playwright-mcp/`: dữ liệu phân tích/thử nghiệm cục bộ, đã nằm trong `.gitignore`
-
-## Worker lịch (`calendar-worker/`)
-Worker chỉ nhận dữ liệu lịch do extension gửi (không giữ cookie, không tự truy vấn web sinh viên, không cron).
-- `POST /` với JSON `{ id, dates, events }`: lưu lịch; các ngày trong `dates` được thay mới, ngày khác giữ nguyên.
-- `GET /?id=<MSSV>`: trả file `.ics`; chưa có dữ liệu thì trả JSON lỗi (404). `&action=view` hiện dữ liệu lưu trong KV dạng JSON thay vì `.ics`.
-- Link chỉ dựa vào MSSV, ai biết MSSV đều xem được lịch của MSSV đó.
-
-Triển khai trên dashboard Cloudflare (không cần cài gì):
-1. **Workers & Pages** > tạo Worker mới > **Edit code** > dán toàn bộ `calendar-worker/index.js` > **Deploy**.
-2. **Storage & Databases > KV**: tạo một KV namespace mới. Vào Worker mới > **Settings > Bindings > Add > KV namespace**, chọn namespace đó và đặt tên biến là đúng `CALENDAR_KV`.
-3. Chép địa chỉ `https://<tên>.<tài khoản>.workers.dev` vào `DEFAULT_CONFIG.calendarSync.workerUrl` trong `config.js` để người dùng khỏi phải nhập (họ chỉ cần tick "Bật đồng bộ lịch học" trong Cài đặt).
+## Cấu trúc mã nguồn
+- `manifest.json` — khai báo extension.
+- `config.js` — cấu hình mặc định và hàm dùng chung cho các trang (popup, cài đặt, tra cứu giảng viên, service worker).
+- `shared/` — mã dùng chung cho content script và trang giảng viên (`dom.js` dựng DOM an toàn, `teachers.js` logic giảng viên).
+- `content/` — chạy trên trang web sinh viên, mỗi file một tính năng:
+  - `student-info.js` (đọc MSSV/họ tên), `attendance.js` (kiểm tra điểm danh), `absent-dashboard.js` (thống kê % nghỉ), `teachers.js` (tải sẵn danh sách giảng viên), `hide-fields.js` (ẩn thông tin).
+  - `main.js` — khởi động các tác vụ nền (nạp sau cùng, thứ tự khai báo trong `manifest.json`).
+  - `qr-scan.js` — lớp phủ chọn vùng + giải mã + hiển thị kết quả QR (chèn khi bấm Alt+Q).
+- `lib/jsQR.js` — thư viện giải mã QR (jsQR 1.4.0, Apache-2.0, kèm license).
+- `background/service-worker.js` — mở tab từ QR, xử lý phím tắt, chạy đồng bộ lịch khi mở trình duyệt (`onStartup`).
+- `background/webhook.js` — so sánh lịch cũ/mới và gửi thông báo Discord.
+- `background/calendar-sync.js` — lấy lịch từng tuần, lưu `chrome.storage.local`.
+- `popup/`, `options/` (trang cài đặt), `teachers/` (trang tra cứu giảng viên).
+- `icons/` — icon 16/32/48/128.
+- `tools/` — công cụ cho người phát triển, **không** đóng gói vào extension (`package.ps1`, `logo-source.png` logo gốc 818px để tạo lại icon).
 
 ## Đóng gói để phát hành
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools/package.ps1
 ```
-Tạo `dist/epu-extension-<version>.zip` chỉ gồm các file extension cần (không có `html/`, `tools/`, README...). Nhớ tăng `version` trong `manifest.json` trước khi phát hành bản mới.
+Tạo `dist/epu-extension-<version>.zip` chỉ gồm các file extension cần thiết. Nhớ tăng `version` trong `manifest.json` trước khi phát hành bản mới.
