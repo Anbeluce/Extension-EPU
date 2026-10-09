@@ -168,6 +168,21 @@ async function resolveLhp(c) {
   return null;
 }
 
+async function fetchAbsentDetail(c, coPhep) {
+  const params = new URLSearchParams({
+    IDDot: c.iddot, MaMonHoc: c.mamonhoc, TenMonHoc: c.name, IsCoPhep: String(coPhep),
+  });
+  const res = await fetch(`/SinhVien/ThongTinDiemDanhChiTiet?${params}`, { credentials: "include" });
+  if (!res.ok) throw new Error(`Lỗi ${res.status}`);
+  return res.text();
+}
+
+// Không có dữ liệu thì server trả một dòng duy nhất gộp cột ("Không có dữ liệu"); dòng thật có nhiều ô.
+const isDetailRow = (tr) => tr.children.length > 1;
+
+const hasDetailRows = (html) =>
+  [...new DOMParser().parseFromString(html, "text/html").querySelectorAll("tbody tr")].some(isDetailRow);
+
 async function runAbsentDashboard() {
   try {
     const [ddRes, syllabusMap] = await Promise.all([
@@ -252,31 +267,114 @@ function renderAbsentDashboard(semData, semesters, errorMsg) {
   });
   wrap.append(detailPanel);
 
-  // Thêm hai cột vào bảng chi tiết nghỉ: mã lớp học phần (cả môn) và mã buổi học trong lịch tuần (từng ngày nghỉ).
-  // Ô hiện "…" trước, tra xong mới điền, nên bảng chi tiết không phải chờ.
+  // Tự đăng ký user lên worker khi mở chi tiết (fire-and-forget).
+  function autoRegister() {
+    if (!currentMSSV) return;
+    Promise.all([
+      chrome.storage.sync.get("config"),
+      chrome.storage.local.get("studentName"),
+    ]).then(([{ config }, { studentName }]) => {
+      const url = (config?.uncheckAttendance?.workerUrl || "").replace(/\/+$/, "");
+      if (url) fetch(`${url}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maSinhVien: currentMSSV, name: studentName || "" }),
+      }).catch(() => {});
+    }).catch(() => {});
+  }
+
+  // Thêm cột mã lớp học phần, mã buổi học, và nút uncheck (luôn hiện).
   function addBgColumns(c) {
     const table = detailPanel.querySelector("table");
-    const rows = table ? [...table.querySelectorAll("tbody tr")] : [];
+    const rows = table ? [...table.querySelectorAll("tbody tr")].filter(isDetailRow) : [];
     if (!rows.length) return;
-    table.querySelector("thead th[colspan]")?.setAttribute("colspan", "6");
-    table.querySelector("thead tr:last-child").append(
+    table.querySelector("thead th[colspan]")?.setAttribute("colspan", "7");
+    const headRow = table.querySelector("thead tr:last-child");
+    headRow.append(
       h("th", { title: "data-bg của lớp học phần (dashboard/API)" }, "Mã LHP"),
-      h("th", { title: "data-bg của buổi học trong lịch tuần" }, "Mã buổi học"));
+      h("th", { title: "data-bg của buổi học trong lịch tuần" }, "Mã buổi học"),
+      h("th", {}));
 
     const fail = (cell, e) => { cell.textContent = "lỗi"; cell.title = e.message; };
     const lhpCells = [];
+    const btnState = [];
     for (const tr of rows) {
       const lhpCell = h("td", { class: "text-center" }, "…");
       const sessionCell = h("td", { class: "text-center" }, "…");
-      tr.append(lhpCell, sessionCell);
+      const uc = h("td", { class: "text-center" });
+      tr.append(lhpCell, sessionCell, uc);
       lhpCells.push(lhpCell);
       const date = datesInText(tr.children[1]?.textContent || "")[0];
+
+      if (date) {
+        const btn = h("button", {
+          style: "opacity:0.12;border:none;background:none;cursor:pointer;font-size:9px;padding:1px 3px",
+          disabled: "disabled",
+        }, "●");
+        btn.addEventListener("mouseenter", () => { if (!btn.disabled) btn.style.opacity = "0.5"; });
+        btn.addEventListener("mouseleave", () => { if (!btn.disabled && btn.textContent === "●") btn.style.opacity = "0.12"; });
+        uc.append(btn);
+        const st = { btn, date, sessionId: null, lhpId: null };
+        btnState.push(st);
+        btn.addEventListener("click", () => doUncheck(st));
+      }
+
       if (!date) { sessionCell.textContent = "—"; continue; }
+      const si = btnState.length - 1;
       sessionsOnDate(c.name, date)
-        .then((ids) => { sessionCell.textContent = ids.join(", ") || "—"; })
+        .then((ids) => {
+          sessionCell.textContent = ids.join(", ") || "—";
+          if (si >= 0 && ids.length) {
+            btnState[si].sessionId = ids[0];
+            if (btnState[si].lhpId) btnState[si].btn.removeAttribute("disabled");
+          }
+        })
         .catch((e) => fail(sessionCell, e));
     }
-    resolveLhp(c).then((id) => lhpCells.forEach((cell) => { cell.textContent = id || "—"; }));
+    resolveLhp(c).then((id) => {
+      lhpCells.forEach((cell) => { cell.textContent = id || "—"; });
+      if (id) for (const s of btnState) {
+        s.lhpId = id;
+        if (s.sessionId) s.btn.removeAttribute("disabled");
+      }
+    });
+  }
+
+  async function doUncheck(state) {
+    if (!currentMSSV || !state.sessionId || !state.lhpId) return;
+    let workerUrl = "";
+    try {
+      const { config } = await chrome.storage.sync.get("config");
+      workerUrl = (config?.uncheckAttendance?.workerUrl || "").replace(/\/+$/, "");
+    } catch {}
+    if (!workerUrl) return;
+    const { btn } = state;
+    btn.textContent = "…";
+    btn.disabled = true;
+    btn.style.opacity = "0.5";
+    try {
+      const res = await fetch(`${workerUrl}/uncheck`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          maSinhVien: currentMSSV,
+          idLopHocPhan: state.lhpId,
+          ngayDiemDanh: state.date,
+          idLichHoc: state.sessionId,
+        }),
+      });
+      const data = await res.json();
+      btn.textContent = data.ok ? "✓" : "✗";
+      btn.style.color = data.ok ? "#16a34a" : "#dc2626";
+      btn.style.opacity = data.ok ? "0.6" : "1";
+      if (data.ok) runAttendanceCheck(true);
+      if (!data.ok) btn.title = data.error || "Lỗi";
+    } catch (e) {
+      btn.textContent = "✗";
+      btn.style.color = "#dc2626";
+      btn.style.opacity = "1";
+      btn.title = e.message;
+    }
   }
 
   async function showDetail(c) {
@@ -284,11 +382,10 @@ function renderAbsentDashboard(semData, semesters, errorMsg) {
     detailPanel.style.display = "block";
     detailPanel.replaceChildren(h("div", { style: "text-align:center;color:#6b7280" }, `Đang tải chi tiết ${c.name}...`));
     try {
-      const params = new URLSearchParams({
-        IDDot: c.iddot, MaMonHoc: c.mamonhoc, TenMonHoc: c.name, IsCoPhep: "false",
-      });
-      const res = await fetch(`/SinhVien/ThongTinDiemDanhChiTiet?${params}`, { credentials: "include" });
-      const html = await res.text();
+      autoRegister();
+      // Xem nghỉ không phép trước; không có dữ liệu thì xem nghỉ có phép.
+      let html = await fetchAbsentDetail(c, false);
+      if (!hasDetailRows(html)) html = await fetchAbsentDetail(c, true);
       detailPanel.replaceChildren(
         h("div", { style: "display:flex;justify-content:space-between;align-items:center;margin-bottom:6px" },
           h("b", {}, `${c.name} — Chi tiết nghỉ`),

@@ -91,6 +91,7 @@ async function load() {
   renderHideFields(hiddenFields || []);
   $("custom-hide-css").value = customHideCSS || "";
 
+  $("uncheck-worker-url").value = config.uncheckAttendance?.workerUrl || "";
   $("sync-worker-url").value = config.cookieSync?.workerUrl || "";
   $("sync-user-name").value = config.cookieSync?.userName || "";
 
@@ -134,10 +135,12 @@ async function saveAll() {
   const oldConfig = await getConfig();
   const portalUrl = $("portalUrl").value.trim();
   const workerUrl = $("sync-worker-url").value.trim();
+  const uncheckUrl = $("uncheck-worker-url").value.trim();
   const calEnabled = $("cal-enabled").checked;
   const calUrl = $("cal-worker-url").value.trim();
   if (!isHttps(portalUrl)) return fail("Địa chỉ web sinh viên phải bắt đầu bằng https://");
   if (workerUrl && !isHttps(workerUrl)) return fail("Worker URL phải bắt đầu bằng https://");
+  if (uncheckUrl && !isHttps(uncheckUrl)) return fail("Worker URL uncheck phải bắt đầu bằng https://");
   if (calUrl && !isHttps(calUrl)) return fail("Địa chỉ Worker lịch phải bắt đầu bằng https://");
   if (calEnabled && !calUrl) return fail("Nhập địa chỉ Worker lịch rồi mới bật được đồng bộ lịch học.");
 
@@ -150,7 +153,7 @@ async function saveAll() {
     return fail("Chỉ hỗ trợ link webhook Discord, dạng https://discord.com/api/webhooks/<số>/<mã>");
   }
 
-  const perm = await ensureOriginPermission(portalUrl, oldConfig.cookieSync?.enabled && workerUrl, calEnabled && calUrl, webhookUrl);
+  const perm = await ensureOriginPermission(portalUrl, oldConfig.cookieSync?.enabled && workerUrl, calEnabled && calUrl, webhookUrl, uncheckUrl);
   if (!perm.ok) return fail(perm.error);
 
   const oldCal = calendarSettings(oldConfig);
@@ -163,6 +166,7 @@ async function saveAll() {
       workerUrl,
       userName: $("sync-user-name").value.trim(),
     },
+    uncheckAttendance: { workerUrl: uncheckUrl },
     calendarSync: newCal,
   };
   await chrome.storage.sync.set({ config });

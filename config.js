@@ -19,6 +19,9 @@ const DEFAULT_CONFIG = {
     fromDate: "", // yyyy-mm-dd; để trống = hôm nay
     toDate: "", // yyyy-mm-dd; để trống = 12 tuần sau ngày bắt đầu
   },
+  uncheckAttendance: {
+    workerUrl: "", // Worker uncheck điểm danh (thư mục uncheck-worker/)
+  },
 };
 
 const HIDEABLE_FIELDS = [
