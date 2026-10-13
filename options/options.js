@@ -225,4 +225,17 @@ $("reset").addEventListener("click", async () => {
   say("Đã khôi phục mặc định.");
 });
 
+// Điều hướng kiểu tab: bấm mục bên trái để hiện đúng phần nội dung.
+function initNav() {
+  const links = [...document.querySelectorAll(".nav a[data-target]")];
+  const panels = [...document.querySelectorAll(".panel")];
+  const show = (id) => {
+    links.forEach((a) => a.classList.toggle("active", a.dataset.target === id));
+    panels.forEach((p) => p.classList.toggle("active", p.id === id));
+    window.scrollTo({ top: 0 });
+  };
+  links.forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); show(a.dataset.target); }));
+}
+
+initNav();
 load();

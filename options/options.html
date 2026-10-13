@@ -7,159 +7,219 @@
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
-  <div class="appbar">
-    <div class="logo">E</div>
-    <h1>Cài đặt EPU Extension <small>Chỉnh xong nhớ bấm Lưu ở cuối trang</small></h1>
-  </div>
+  <div class="shell">
+    <aside class="nav">
+      <div class="brand"><b>EPU Extension</b><span>Cài đặt</span></div>
+      <nav>
+        <a data-target="sec-chung" class="active">Chung</a>
+        <a data-target="sec-trang">Hiển thị trên trang</a>
+        <a data-target="sec-khaosat">Tự động khảo sát</a>
+        <a data-target="sec-lich">Lịch học &amp; thông báo</a>
+        <a data-target="sec-nangcao">Nâng cao</a>
+      </nav>
+      <div class="nav-foot">Chỉnh xong nhớ bấm Lưu.</div>
+    </aside>
 
-  <main class="wrap">
+    <div class="content">
 
-    <!-- ===== Chung ===== -->
-    <section class="card">
-      <div class="card-head">
-        <h2><span class="ic">⚙️</span> Chung</h2>
-        <p class="desc">Địa chỉ web sinh viên và các liên kết mở nhanh trong popup.</p>
-      </div>
-      <div class="card-body">
-        <div class="field">
-          <label for="portalUrl">Web sinh viên đang dùng</label>
-          <select id="portalUrl">
-            <option value="https://sv.epu.edu.vn">sv.epu.edu.vn</option>
-            <option value="https://thanhtoanhocphi.epu.edu.vn">thanhtoanhocphi.epu.edu.vn</option>
-          </select>
-          <p class="hint">Áp dụng cho cookie, đồng bộ lịch và tra cứu giảng viên. Các tính năng trên trang chạy ở cả hai site.</p>
+      <!-- ===== Chung ===== -->
+      <section id="sec-chung" class="panel active">
+        <div class="panel-head">
+          <h2>Chung</h2>
+          <p>Địa chỉ web sinh viên và các liên kết mở nhanh trong popup.</p>
         </div>
 
-        <div class="field">
-          <label>Liên kết nhanh</label>
-          <table class="links-table">
-            <thead><tr><th>Tên</th><th>Đường dẫn</th><th></th></tr></thead>
-            <tbody id="links-body"></tbody>
-          </table>
-          <div class="add-row">
-            <input id="link-name" type="text" placeholder="Tên (VD: Thời khóa biểu)">
-            <input id="link-url" type="text" placeholder="Đường dẫn (VD: /thoi-khoa-bieu)">
-            <button id="btn-add-link" class="btn-sm">Thêm</button>
+        <div class="row">
+          <div class="row-label">
+            <label for="portalUrl">Web sinh viên</label>
+            <p class="sub">Áp dụng cho cookie, đồng bộ lịch và tra cứu giảng viên.</p>
           </div>
-          <p class="hint">Đường dẫn tương đối sẽ tự ghép với địa chỉ web sinh viên.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== Trên trang web sinh viên ===== -->
-    <section class="card">
-      <div class="card-head">
-        <h2><span class="ic">🛡️</span> Hiển thị trên trang</h2>
-        <p class="desc">Những thứ thay đổi giao diện ngay trên web sinh viên.</p>
-      </div>
-      <div class="card-body">
-        <div class="field">
-          <label>Ẩn thông tin cá nhân</label>
-          <p class="hint">Chọn các trường muốn ẩn (tiện khi chia sẻ màn hình). Bật/tắt nhanh trong popup.</p>
-          <div id="hide-fields-list"></div>
-        </div>
-        <div class="field">
-          <label for="custom-hide-css">CSS tuỳ chỉnh (ẩn thêm phần tử bất kỳ)</label>
-          <textarea id="custom-hide-css" rows="3" placeholder="#my-element { display: none !important; }"></textarea>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== Tự động khảo sát ===== -->
-    <section class="card">
-      <div class="card-head">
-        <h2><span class="ic">📝</span> Tự động khảo sát</h2>
-        <p class="desc">Tự điền và <b>gửi</b> lần lượt các phiếu khảo sát bắt buộc. Bật/tắt trong popup (phải cấu hình ở đây ít nhất một lần). Khi chạy có đếm ngược và nút Huỷ/Dừng.</p>
-      </div>
-      <div class="card-body">
-        <p class="hint warn">Lưu ý: khảo sát đã gửi không hoàn tác được.</p>
-        <div class="field">
-          <label for="as-score">Điểm mặc định cho câu thang điểm</label>
-          <select id="as-score">
-            <option value="5">5 · Hoàn toàn đồng ý</option>
-            <option value="4">4 · Đồng ý</option>
-            <option value="3">3 · Phân vân</option>
-            <option value="2">2 · Không đồng ý</option>
-            <option value="1">1 · Hoàn toàn không đồng ý</option>
-            <option value="0">0 · Không áp dụng</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="as-text1">Câu tự luận 1 <span style="font-weight:400;color:var(--muted)">(vd: điều nên tiếp tục phát huy)</span></label>
-          <textarea id="as-text1" rows="2" placeholder="Để trống nếu không muốn điền"></textarea>
-        </div>
-        <div class="field">
-          <label for="as-text2">Câu tự luận 2 <span style="font-weight:400;color:var(--muted)">(vd: điều nên điều chỉnh)</span></label>
-          <textarea id="as-text2" rows="2" placeholder="Để trống nếu không muốn điền"></textarea>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== Lịch học & thông báo ===== -->
-    <section class="card">
-      <div class="card-head">
-        <h2><span class="ic">📅</span> Đồng bộ lịch học</h2>
-        <p class="desc">Tự lấy lịch theo tuần (tối đa 1 lần/ngày khi mở trình duyệt) và tạo link <b>.ics</b> để thêm vào Google Calendar / Outlook / lịch điện thoại. Cần đang đăng nhập web sinh viên.</p>
-      </div>
-      <div class="card-body">
-        <label class="switch"><input type="checkbox" id="cal-enabled"><span class="slider"></span><span>Bật đồng bộ lịch học</span></label>
-
-        <div class="field">
-          <label for="cal-worker-url">Địa chỉ Worker lịch</label>
-          <input id="cal-worker-url" type="url" placeholder="https://epu-calendar.your-name.workers.dev">
-        </div>
-
-        <div class="field">
-          <label>Khoảng ngày lấy lịch</label>
-          <div class="range">
-            <span>Từ</span> <input id="cal-from" type="date"> <span>đến</span> <input id="cal-to" type="date">
-          </div>
-          <p class="hint">Để trống "từ" là hôm nay; để trống "đến" là 12 tuần sau ngày bắt đầu. Tối đa 1 năm.</p>
-        </div>
-
-        <p id="cal-status" class="status"></p>
-
-        <div class="field">
-          <label for="cal-link">Link lịch .ics</label>
-          <div class="inline-row">
-            <input id="cal-link" type="text" readonly placeholder="Link sẽ hiện sau khi đồng bộ">
-            <button id="btn-cal-copy" class="btn-sm">Sao chép</button>
+          <div class="row-ctl">
+            <select id="portalUrl">
+              <option value="https://sv.epu.edu.vn">sv.epu.edu.vn</option>
+              <option value="https://thanhtoanhocphi.epu.edu.vn">thanhtoanhocphi.epu.edu.vn</option>
+            </select>
           </div>
         </div>
 
-        <div><button id="btn-cal-sync" class="btn-primary btn-sm">Lưu và đồng bộ ngay</button></div>
-
-        <p class="subhead">🔔 Thông báo qua webhook Discord</p>
-        <div class="field">
-          <label for="webhook-url">Link webhook</label>
-          <input id="webhook-url" type="url" placeholder="https://discord.com/api/webhooks/...">
-          <p class="hint">Mỗi lần đồng bộ lịch (kể cả thử lại) gửi một tin về kênh Discord. Link là bí mật, chỉ lưu trong trình duyệt này, không gửi lên Worker. Để trống là tắt.</p>
+        <div class="row stack">
+          <div class="row-label">
+            <label>Liên kết nhanh</label>
+            <p class="sub">Đường dẫn tương đối sẽ tự ghép với địa chỉ web sinh viên.</p>
+          </div>
+          <div class="row-ctl">
+            <table class="links-table">
+              <thead><tr><th>Tên</th><th>Đường dẫn</th><th></th></tr></thead>
+              <tbody id="links-body"></tbody>
+            </table>
+            <div class="add-row">
+              <input id="link-name" type="text" placeholder="Tên (VD: Thời khóa biểu)">
+              <input id="link-url" type="text" placeholder="Đường dẫn (VD: /thoi-khoa-bieu)">
+              <button id="btn-add-link" class="btn-sm">Thêm</button>
+            </div>
+          </div>
         </div>
-        <div><button id="btn-wh-test" class="btn-sm">Lưu và gửi tin thử</button></div>
-      </div>
-    </section>
+      </section>
 
-    <!-- ===== Nâng cao ===== -->
-    <section class="card">
-      <div class="card-head">
-        <h2><span class="ic">🧩</span> Nâng cao</h2>
-        <p class="desc">Tuỳ chọn cho người dùng chuyên sâu — cần tự dựng dịch vụ đi kèm.</p>
-      </div>
-      <div class="card-body">
-        <div class="field">
-          <label for="uncheck-worker-url">Gỡ dấu nghỉ — địa chỉ Worker</label>
-          <input id="uncheck-worker-url" type="url" placeholder="https://epu-uncheck.your-name.workers.dev">
-          <p class="hint">Khi điền, bảng <b>Chi tiết nghỉ</b> ở trang điểm danh sẽ hiện một nút nhỏ ở mỗi buổi nghỉ. Bấm nút đó, extension gọi Cloudflare Worker của bạn để <b>gỡ dấu điểm danh nghỉ</b> buổi tương ứng rồi tự làm mới số buổi. Cần tự dựng Worker (mã nguồn ở thư mục <code>uncheck-worker/</code>, không kèm bản phát hành) và có quyền tương ứng. Để trống là tắt.</p>
+      <!-- ===== Hiển thị trên trang ===== -->
+      <section id="sec-trang" class="panel">
+        <div class="panel-head">
+          <h2>Hiển thị trên trang</h2>
+          <p>Những thứ thay đổi giao diện ngay trên web sinh viên.</p>
         </div>
-      </div>
-    </section>
 
-  </main>
+        <div class="row stack">
+          <div class="row-label">
+            <label>Ẩn thông tin cá nhân</label>
+            <p class="sub">Chọn các trường muốn ẩn (tiện khi chia sẻ màn hình). Bật/tắt nhanh trong popup.</p>
+          </div>
+          <div class="row-ctl">
+            <div id="hide-fields-list"></div>
+          </div>
+        </div>
 
-  <div class="savebar">
-    <span id="msg"></span>
-    <button id="reset" class="btn-ghost btn-sm">Khôi phục mặc định</button>
-    <button id="save" class="btn-primary">Lưu</button>
+        <div class="row stack">
+          <div class="row-label">
+            <label for="custom-hide-css">CSS tuỳ chỉnh</label>
+            <p class="sub">Ẩn thêm phần tử bất kỳ bằng CSS của riêng bạn.</p>
+          </div>
+          <div class="row-ctl">
+            <textarea id="custom-hide-css" rows="4" placeholder="#my-element { display: none !important; }"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Tự động khảo sát ===== -->
+      <section id="sec-khaosat" class="panel">
+        <div class="panel-head">
+          <h2>Tự động khảo sát</h2>
+          <p>Tự điền và <b>gửi</b> lần lượt các phiếu khảo sát bắt buộc. Bật/tắt trong popup (phải cấu hình ở đây ít nhất một lần). Khi chạy có đếm ngược và nút Huỷ/Dừng. <span class="hint warn" style="display:inline">Khảo sát đã gửi không hoàn tác được.</span></p>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <label for="as-score">Điểm mặc định</label>
+            <p class="sub">Dùng cho mọi câu thang điểm.</p>
+          </div>
+          <div class="row-ctl">
+            <select id="as-score">
+              <option value="5">5 · Hoàn toàn đồng ý</option>
+              <option value="4">4 · Đồng ý</option>
+              <option value="3">3 · Phân vân</option>
+              <option value="2">2 · Không đồng ý</option>
+              <option value="1">1 · Hoàn toàn không đồng ý</option>
+              <option value="0">0 · Không áp dụng</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <label for="as-text1">Câu tự luận 1</label>
+            <p class="sub">Ví dụ: điều nên tiếp tục phát huy.</p>
+          </div>
+          <div class="row-ctl">
+            <textarea id="as-text1" rows="2" placeholder="Để trống nếu không muốn điền"></textarea>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <label for="as-text2">Câu tự luận 2</label>
+            <p class="sub">Ví dụ: điều nên điều chỉnh.</p>
+          </div>
+          <div class="row-ctl">
+            <textarea id="as-text2" rows="2" placeholder="Để trống nếu không muốn điền"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Lịch học & thông báo ===== -->
+      <section id="sec-lich" class="panel">
+        <div class="panel-head">
+          <h2>Lịch học &amp; thông báo</h2>
+          <p>Tự lấy lịch theo tuần (tối đa 1 lần/ngày khi mở trình duyệt) và tạo link <b>.ics</b> để thêm vào Google Calendar / Outlook / lịch điện thoại.</p>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <label>Đồng bộ lịch học</label>
+            <p class="sub">Cần đang đăng nhập web sinh viên.</p>
+          </div>
+          <div class="row-ctl">
+            <label class="switch"><input type="checkbox" id="cal-enabled"><span class="slider"></span><span>Bật đồng bộ</span></label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-label"><label for="cal-worker-url">Địa chỉ Worker lịch</label></div>
+          <div class="row-ctl">
+            <input id="cal-worker-url" type="url" placeholder="https://epu-calendar.your-name.workers.dev">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <label>Khoảng ngày</label>
+            <p class="sub">Để trống "từ" là hôm nay; để trống "đến" là 12 tuần sau. Tối đa 1 năm.</p>
+          </div>
+          <div class="row-ctl">
+            <div class="range"><span>Từ</span> <input id="cal-from" type="date"> <span>đến</span> <input id="cal-to" type="date"></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <label for="cal-link">Link lịch .ics</label>
+            <p class="sub" id="cal-status-wrap"></p>
+          </div>
+          <div class="row-ctl">
+            <div class="inline-row">
+              <input id="cal-link" type="text" readonly placeholder="Link sẽ hiện sau khi đồng bộ">
+              <button id="btn-cal-copy" class="btn-sm">Sao chép</button>
+            </div>
+            <p id="cal-status" class="status"></p>
+            <div><button id="btn-cal-sync" class="btn-primary btn-sm">Lưu và đồng bộ ngay</button></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <label for="webhook-url">Webhook Discord</label>
+            <p class="sub">Mỗi lần đồng bộ lịch (kể cả thử lại) gửi một tin về kênh Discord. Link là bí mật, chỉ lưu trong trình duyệt này. Để trống là tắt.</p>
+          </div>
+          <div class="row-ctl">
+            <input id="webhook-url" type="url" placeholder="https://discord.com/api/webhooks/...">
+            <div><button id="btn-wh-test" class="btn-sm">Lưu và gửi tin thử</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Nâng cao ===== -->
+      <section id="sec-nangcao" class="panel">
+        <div class="panel-head">
+          <h2>Nâng cao</h2>
+          <p>Tuỳ chọn cho người dùng chuyên sâu — cần tự dựng dịch vụ đi kèm.</p>
+        </div>
+
+        <div class="row stack">
+          <div class="row-label">
+            <label for="uncheck-worker-url">Gỡ dấu nghỉ — địa chỉ Worker</label>
+            <p class="sub">Khi điền, bảng <b>Chi tiết nghỉ</b> ở trang điểm danh sẽ hiện nút nhỏ ở mỗi buổi nghỉ. Bấm nút đó, extension gọi Cloudflare Worker của bạn để <b>gỡ dấu điểm danh nghỉ</b> buổi tương ứng rồi tự làm mới số buổi. Cần tự dựng Worker (mã nguồn ở thư mục <code>uncheck-worker/</code>, không kèm bản phát hành). Để trống là tắt.</p>
+          </div>
+          <div class="row-ctl">
+            <input id="uncheck-worker-url" type="url" placeholder="https://epu-uncheck.your-name.workers.dev">
+          </div>
+        </div>
+      </section>
+
+      <footer class="actions">
+        <span id="msg"></span>
+        <button id="reset" class="btn-ghost btn-sm">Khôi phục mặc định</button>
+        <button id="save" class="btn-primary">Lưu thay đổi</button>
+      </footer>
+
+    </div>
   </div>
 
   <script src="../config.js"></script>
