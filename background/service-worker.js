@@ -28,6 +28,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return;
   }
 
+  if (msg.type === "OPEN_AUTO_SURVEY") {
+    chrome.tabs.create({
+      url: chrome.runtime.getURL("tools/auto-survey.html") + (msg.auto ? "?auto=1" : ""),
+      openerTabId: sender.tab?.id,
+    });
+    return;
+  }
+
   if (msg.type === "SHOW_TOASTR") {
     const tabId = sender.tab?.id;
     if (!tabId) return;

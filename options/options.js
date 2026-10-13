@@ -94,6 +94,11 @@ async function load() {
   $("uncheck-worker-url").value = config.uncheckAttendance?.workerUrl || "";
   $("sync-worker-url").value = config.cookieSync?.workerUrl || "";
 
+  const as = config.autoSurvey || {};
+  $("as-score").value = String(as.score != null ? as.score : 5);
+  $("as-text1").value = as.text1 || "";
+  $("as-text2").value = as.text2 || "";
+
   const cal = calendarSettings(config);
   $("cal-enabled").checked = cal.enabled;
   $("cal-worker-url").value = cal.workerUrl;
@@ -170,6 +175,13 @@ async function saveAll() {
     },
     uncheckAttendance: { workerUrl: uncheckUrl },
     calendarSync: newCal,
+    autoSurvey: {
+      ...(oldConfig.autoSurvey || {}),
+      reviewed: true, // đã xem cấu hình → cho phép bật trong popup
+      score: parseInt($("as-score").value, 10),
+      text1: $("as-text1").value.trim(),
+      text2: $("as-text2").value.trim(),
+    },
   };
   await chrome.storage.sync.set({ config });
   const hiddenFields = getSelectedHideFields();

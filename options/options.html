@@ -62,6 +62,25 @@
     <textarea id="custom-hide-css" rows="3" placeholder="#my-element { display: none !important; }"></textarea>
   </label>
 
+  <h2>Tự động khảo sát</h2>
+  <p><small>Tự điền và <b>GỬI</b> lần lượt tất cả phiếu khảo sát bắt buộc. Bật/tắt nhanh trong popup (phải cấu hình ở đây ít nhất một lần trước khi bật được). <b style="color:#b91c1c">Lưu ý: khảo sát đã gửi không hoàn tác được.</b> Khi chạy sẽ có đếm ngược và nút Huỷ/Dừng.</small></p>
+  <label>Điểm mặc định cho câu thang điểm
+    <select id="as-score">
+      <option value="5">5 - Hoàn toàn đồng ý</option>
+      <option value="4">4 - Đồng ý</option>
+      <option value="3">3 - Phân vân</option>
+      <option value="2">2 - Không đồng ý</option>
+      <option value="1">1 - Hoàn toàn không đồng ý</option>
+      <option value="0">0 - Không áp dụng</option>
+    </select>
+  </label>
+  <label style="margin-top:8px">Câu tự luận 1 (vd: điều nên tiếp tục phát huy)
+    <textarea id="as-text1" rows="2" style="height:auto" placeholder="Để trống nếu không muốn điền"></textarea>
+  </label>
+  <label style="margin-top:8px">Câu tự luận 2 (vd: điều nên điều chỉnh)
+    <textarea id="as-text2" rows="2" style="height:auto" placeholder="Để trống nếu không muốn điền"></textarea>
+  </label>
+
   <h2>Đồng bộ lịch học (tự động)</h2>
   <p><small>Khi mở trình duyệt (tối đa 1 lần mỗi ngày), extension tự lấy lịch học từ web sinh viên rồi gửi lên Worker để tạo link lịch .ics. Cần đang đăng nhập web sinh viên.</small></p>
   <label class="check"><input type="checkbox" id="cal-enabled"> Bật đồng bộ lịch học</label>

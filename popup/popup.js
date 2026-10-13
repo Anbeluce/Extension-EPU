@@ -281,6 +281,42 @@ $("hide-toggle").addEventListener("change", async () => {
 
 $("btn-hide-settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
 
+// --- Tự động khảo sát ---
+
+const setASStatus = (text, isError = false) => {
+  $("autosurvey-status").textContent = text;
+  $("autosurvey-status").classList.toggle("error", isError);
+};
+
+async function loadAutoSurveyState() {
+  const { autoSurvey } = await getConfig();
+  const a = autoSurvey || {};
+  $("autosurvey-toggle").checked = !!a.enabled;
+  if (!a.reviewed) return setASStatus("Chưa cấu hình. Bấm Cấu hình rồi mới bật được.", true);
+  setASStatus(a.enabled ? `Đang bật. Điểm mặc định: ${a.score}.` : "Đang tắt.");
+}
+
+$("autosurvey-toggle").addEventListener("change", async () => {
+  const on = $("autosurvey-toggle").checked;
+  const config = await getConfig();
+  const a = config.autoSurvey || {};
+  if (on && !a.reviewed) {
+    $("autosurvey-toggle").checked = false;
+    setASStatus("Hãy cấu hình trước (điểm, nội dung góp ý) rồi bật lại.", true);
+    chrome.runtime.openOptionsPage();
+    return;
+  }
+  config.autoSurvey = { ...a, enabled: on };
+  await chrome.storage.sync.set({ config });
+  setASStatus(on ? "Đã bật. Mở trang khảo sát để chạy tự động." : "Đã tắt.");
+});
+
+$("btn-autosurvey-run").addEventListener("click", () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL("tools/auto-survey.html") });
+});
+
+$("btn-autosurvey-settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
+
 // --- Version check ---
 
 function showVersion() {
@@ -326,5 +362,6 @@ function compareVersions(a, b) {
   loadSyncState();
   loadCalendarState();
   loadHideState();
+  loadAutoSurveyState();
   checkForUpdate();
 })();

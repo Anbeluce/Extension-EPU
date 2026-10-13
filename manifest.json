@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "EPU Extension",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Tiện ích cho web sinh viên EPU: liên kết nhanh, tra cứu giảng viên, thống kê nghỉ học, quản lý cookie, quét mã QR.",
   "minimum_chrome_version": "121",
   "permissions": ["storage", "activeTab", "scripting", "cookies", "notifications", "alarms"],
@@ -31,6 +31,7 @@
       "js": [
         "shared/dom.js",
         "shared/teachers.js",
+        "content/auto-survey.js",
         "content/student-info.js",
         "content/attendance.js",
         "content/absent-dashboard.js",

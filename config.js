@@ -21,6 +21,14 @@ const DEFAULT_CONFIG = {
   uncheckAttendance: {
     workerUrl: "", // Worker uncheck điểm danh (thư mục uncheck-worker/)
   },
+  // Tự động điền & gửi phiếu khảo sát bắt buộc (KSSV giữa/cuối học phần).
+  autoSurvey: {
+    enabled: false, // bật/tắt (đổi nhanh trong popup)
+    reviewed: false, // đã vào trang cấu hình ít nhất một lần chưa (bắt buộc trước khi bật)
+    score: 5, // điểm mặc định cho mọi câu thang điểm: 1..5, hoặc 0 = không áp dụng
+    text1: "", // trả lời câu tự luận thứ 1 (vd "nên phát huy")
+    text2: "", // trả lời câu tự luận thứ 2 (vd "nên điều chỉnh")
+  },
 };
 
 const HIDEABLE_FIELDS = [

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Tự động khảo sát — EPU Extension</title>
+  <link rel="stylesheet" href="auto-survey.css">
+</head>
+<body>
+  <header>
+    <h1>Tự động khảo sát <small>sv.epu.edu.vn</small></h1>
+    <div class="actions">
+      <button id="btn-harvest" class="btn">Tải lại danh sách</button>
+      <button id="btn-run" class="btn btn-primary">Chạy tất cả (điền + GỬI)</button>
+      <button id="btn-stop" class="btn btn-danger" disabled>Dừng</button>
+    </div>
+  </header>
+
+  <div class="warn">Trang này sẽ tự <b>điền và GỬI</b> phiếu khảo sát. <b>Khảo sát đã gửi không hoàn tác được.</b> Hãy kiểm tra cấu hình bên dưới trước khi chạy.</div>
+
+  <div class="cfg">
+    <label for="cfg-score">Điểm mặc định</label>
+    <select id="cfg-score">
+      <option value="5">5 - Hoàn toàn đồng ý</option>
+      <option value="4">4 - Đồng ý</option>
+      <option value="3">3 - Phân vân</option>
+      <option value="2">2 - Không đồng ý</option>
+      <option value="1">1 - Hoàn toàn không đồng ý</option>
+      <option value="0">0 - Không áp dụng</option>
+    </select>
+    <label for="cfg-text1">Câu tự luận 1</label>
+    <input id="cfg-text1" type="text" placeholder="Để trống nếu không muốn điền">
+    <label for="cfg-text2">Câu tự luận 2</label>
+    <input id="cfg-text2" type="text" placeholder="Để trống nếu không muốn điền">
+    <div class="full"><button id="btn-save-cfg" class="btn btn-sm">Lưu cấu hình</button></div>
+  </div>
+
+  <div id="countdown" class="countdown">
+    <span id="countdown-text"></span>
+    <button id="countdown-cancel" class="btn btn-danger">Huỷ</button>
+  </div>
+
+  <p id="status" class="status">Đang tải…</p>
+
+  <div class="list-pane">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Phiếu</th><th>Trạng thái</th><th>Ghi chú</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <script src="../config.js"></script>
+  <script src="auto-survey.js"></script>
+</body>
+</html>
