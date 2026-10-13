@@ -15,24 +15,20 @@
   --field: #fff;
   --field-line: #d9d6cc;
 }
+/* Nền tối: theo hệ thống (trừ khi ép sáng), và khi bật công tắc Chế độ tối. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #15171a;
-    --panel: #1c1f23;
-    --nav: #171a1d;
-    --ink: #e8e7e2;
-    --muted: #9b998f;
-    --faint: #76746c;
-    --line: #2b2f34;
-    --line-soft: #23262b;
-    --accent: #5b97e0;
-    --accent-ink: #8bb6ec;
-    --accent-soft: #132742;
-    --danger: #ef7a62;
-    --ok: #6cc46f;
-    --field: #141719;
-    --field-line: #333840;
+  :root:not([data-theme="light"]) {
+    --paper: #15171a; --panel: #1c1f23; --nav: #171a1d; --ink: #e8e7e2;
+    --muted: #9b998f; --faint: #76746c; --line: #2b2f34; --line-soft: #23262b;
+    --accent: #5b97e0; --accent-ink: #8bb6ec; --accent-soft: #132742;
+    --danger: #ef7a62; --ok: #6cc46f; --field: #141719; --field-line: #333840;
   }
+}
+:root[data-theme="dark"] {
+  --paper: #15171a; --panel: #1c1f23; --nav: #171a1d; --ink: #e8e7e2;
+  --muted: #9b998f; --faint: #76746c; --line: #2b2f34; --line-soft: #23262b;
+  --accent: #5b97e0; --accent-ink: #8bb6ec; --accent-soft: #132742;
+  --danger: #ef7a62; --ok: #6cc46f; --field: #141719; --field-line: #333840;
 }
 
 * { box-sizing: border-box; }
@@ -174,7 +170,7 @@ button:hover { background: var(--line-soft); }
   .nav { width: auto; height: auto; position: static; border-right: 0; border-bottom: 1px solid var(--line); padding: 14px 0; }
   .nav nav { flex-direction: row; flex-wrap: wrap; }
   .nav a.active::before { display: none; }
-  .nav-foot { display: none; }
+  .nav-foot { margin-top: 8px; padding: 10px 16px 0; }
   .panel { padding: 26px 20px; }
   .row { grid-template-columns: 1fr; gap: 10px; }
   .hide-grid { grid-template-columns: repeat(2, 1fr); }

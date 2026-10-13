@@ -242,5 +242,20 @@ function initNav() {
   window.addEventListener("hashchange", () => show(location.hash.slice(1)));
 }
 
+// Chế độ sáng/tối (công tắc ở sidebar).
+async function initTheme() {
+  let theme = await loadTheme();
+  applyTheme(theme);
+  const cb = $("theme-toggle");
+  if (!cb) return;
+  cb.checked = theme ? theme === "dark" : systemDark();
+  cb.addEventListener("change", async () => {
+    theme = cb.checked ? "dark" : "light";
+    applyTheme(theme);
+    try { await chrome.storage.local.set({ theme }); } catch {}
+  });
+}
+
+initTheme();
 initNav();
 load();

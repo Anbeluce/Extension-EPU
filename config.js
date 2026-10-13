@@ -68,6 +68,21 @@ const getConfig = async () => {
   return { ...DEFAULT_CONFIG, ...(stored.config || {}) };
 };
 
+// Giao diện sáng/tối. Lưu ở storage.local key "theme" = "light" | "dark";
+// không đặt (hoặc rỗng) = theo cài đặt hệ thống. Dùng chung cho popup và trang Cài đặt.
+function applyTheme(theme) {
+  const el = typeof document !== "undefined" && document.documentElement;
+  if (!el) return;
+  if (theme === "light" || theme === "dark") el.dataset.theme = theme;
+  else el.removeAttribute("data-theme");
+}
+async function loadTheme() {
+  try { return (await chrome.storage.local.get("theme")).theme || ""; } catch { return ""; }
+}
+function systemDark() {
+  try { return matchMedia("(prefers-color-scheme: dark)").matches; } catch { return false; }
+}
+
 const isHttps = (url) => {
   try { return new URL(url).protocol === "https:"; } catch { return false; }
 };

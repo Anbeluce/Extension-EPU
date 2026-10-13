@@ -4,11 +4,33 @@ const $ = (id) => document.getElementById(id);
 // Bản public không có file này; import thất bại sẽ bị bỏ qua, không ảnh hưởng gì.
 import(chrome.runtime.getURL("local/private.js")).catch(() => {});
 
+// Áp dụng chế độ sáng/tối càng sớm càng tốt (tránh nháy màu).
+loadTheme().then(applyTheme);
+
 const activeTab = async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
 
 // Mở trang Cài đặt, nhảy thẳng tới đúng mục (theo hash).
 function openSettings(section) {
   chrome.tabs.create({ url: chrome.runtime.getURL("options/options.html") + (section ? "#" + section : "") });
+}
+
+// Nút bật/tắt chế độ tối (nhãn cho biết bấm sẽ chuyển sang chế độ nào).
+async function initTheme() {
+  const btn = $("theme-toggle-btn");
+  let theme = await loadTheme();
+  applyTheme(theme);
+  const render = () => {
+    const dark = theme ? theme === "dark" : systemDark();
+    if (btn) btn.textContent = dark ? "Sáng" : "Tối";
+  };
+  render();
+  btn?.addEventListener("click", async () => {
+    const dark = theme ? theme === "dark" : systemDark();
+    theme = dark ? "light" : "dark";
+    applyTheme(theme);
+    try { await chrome.storage.local.set({ theme }); } catch {}
+    render();
+  });
 }
 
 function renderGreeting(name) {
@@ -319,6 +341,7 @@ function compareVersions(a, b) {
   const { studentName } = await chrome.storage.local.get("studentName");
   renderGreeting(studentName);
   showVersion();
+  initTheme();
   renderLinks();
   loadCalendarState();
   loadHideState();
