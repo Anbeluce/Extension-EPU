@@ -11,8 +11,25 @@
 
 const $ = (id) => document.getElementById(id);
 
-// Theo chế độ sáng/tối đã chọn (lưu chung ở storage.local).
-loadTheme().then(applyTheme);
+// Theo chế độ sáng/tối đã chọn (lưu chung ở storage.local), kèm nút bật/tắt.
+async function initTheme() {
+  const btn = $("theme-toggle-btn");
+  let theme = await loadTheme();
+  applyTheme(theme);
+  const render = () => {
+    const dark = theme ? theme === "dark" : systemDark();
+    if (btn) btn.textContent = dark ? "Sáng" : "Tối";
+  };
+  render();
+  btn?.addEventListener("click", async () => {
+    const dark = theme ? theme === "dark" : systemDark();
+    theme = dark ? "light" : "dark";
+    applyTheme(theme);
+    try { await chrome.storage.local.set({ theme }); } catch {}
+    render();
+  });
+}
+initTheme();
 
 let PORTAL = "https://sv.epu.edu.vn";
 let CFG = { score: 5, text1: "", text2: "" };
