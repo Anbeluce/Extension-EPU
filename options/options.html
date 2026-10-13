@@ -143,12 +143,13 @@
     <section class="card">
       <div class="card-head">
         <h2><span class="ic">🧩</span> Nâng cao</h2>
-        <p class="desc">Tuỳ chọn cho người dùng chuyên sâu.</p>
+        <p class="desc">Tuỳ chọn cho người dùng chuyên sâu — cần tự dựng dịch vụ đi kèm.</p>
       </div>
       <div class="card-body">
         <div class="field">
-          <label for="uncheck-worker-url">Worker URL (uncheck điểm danh)</label>
-          <input id="uncheck-worker-url" type="url" placeholder="https://...">
+          <label for="uncheck-worker-url">Gỡ dấu nghỉ — địa chỉ Worker</label>
+          <input id="uncheck-worker-url" type="url" placeholder="https://epu-uncheck.your-name.workers.dev">
+          <p class="hint">Khi điền, bảng <b>Chi tiết nghỉ</b> ở trang điểm danh sẽ hiện một nút nhỏ ở mỗi buổi nghỉ. Bấm nút đó, extension gọi Cloudflare Worker của bạn để <b>gỡ dấu điểm danh nghỉ</b> buổi tương ứng rồi tự làm mới số buổi. Cần tự dựng Worker (mã nguồn ở thư mục <code>uncheck-worker/</code>, không kèm bản phát hành) và có quyền tương ứng. Để trống là tắt.</p>
         </div>
       </div>
     </section>
