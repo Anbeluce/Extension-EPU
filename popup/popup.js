@@ -1,5 +1,9 @@
 const $ = (id) => document.getElementById(id);
 
+// Nạp các tính năng riêng (thư mục local/ — chỉ có ở máy dev, đã .gitignore).
+// Bản public không có file này; import thất bại sẽ bị bỏ qua, không ảnh hưởng gì.
+import(chrome.runtime.getURL("local/private.js")).catch(() => {});
+
 const activeTab = async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
 
 function renderGreeting(name) {

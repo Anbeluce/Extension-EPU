@@ -1,8 +1,6 @@
 /html/
 .playwright-mcp
-/tools/probe.html
-/tools/probe.css
-/tools/probe.js
+/local/
 /dist/
 /worker.js
 /uncheck-worker/
