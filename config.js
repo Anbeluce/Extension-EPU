@@ -3,15 +3,11 @@
 const DEFAULT_CONFIG = {
   portalUrl: "https://sv.epu.edu.vn",
   quickLinks: [
-    { name: "Trang chủ", url: "/" },
-    { name: "Thời khóa biểu", url: "/thoi-khoa-bieu" },
-    { name: "Xem điểm", url: "/xem-diem" },
-    { name: "Đăng ký tín chỉ", url: "/dang-ky-hoc-phan.html" }
+    { name: "Trang chủ", url: "/dashboard.html" },
+    { name: "Lịch theo tuần", url: "/lich-theo-tuan.html" },
+    { name: "Kết quả học tập", url: "/ket-qua-hoc-tap.html" },
+    { name: "Đăng ký học phần", url: "/dang-ky-hoc-phan.html" }
   ],
-  cookieSync: {
-    enabled: false,
-    workerUrl: "",
-  },
   calendarSync: {
     enabled: false,
     workerUrl: "https://calender.epuer.id.vn/", // Worker lịch (thư mục calendar-worker/)

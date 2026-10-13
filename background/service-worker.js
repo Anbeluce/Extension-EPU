@@ -1,11 +1,6 @@
 try { importScripts("/config.js", "/background/webhook.js", "/background/calendar-sync.js"); } catch {}
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg.type === "SYNC_COOKIES") {
-    syncCookies(msg.force).then(sendResponse);
-    return true;
-  }
-
   if (msg.type === "TEST_WEBHOOK") {
     sendTestWebhook().then(sendResponse);
     return true;
@@ -51,63 +46,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
   }
 });
-
-async function syncCookies(force = false) {
-  const config = await getConfig();
-  const { cookieSync } = config;
-
-  if (!cookieSync?.enabled || !cookieSync?.workerUrl) {
-    return { ok: false, error: "Chưa cấu hình đồng bộ cookie." };
-  }
-
-  // Cookie đăng nhập chỉ được gửi tới địa chỉ https mà người dùng đã cấp quyền.
-  if (!isHttps(cookieSync.workerUrl)) {
-    return { ok: false, error: "Worker URL phải bắt đầu bằng https://" };
-  }
-  const workerOrigin = new URL(cookieSync.workerUrl).origin + "/*";
-  if (!(await chrome.permissions.contains({ origins: [workerOrigin] }))) {
-    return { ok: false, error: "Chưa cấp quyền cho Worker. Hãy tắt rồi bật lại 'Đồng bộ Cookie' trong popup." };
-  }
-
-  const { studentMSSV } = await chrome.storage.local.get("studentMSSV");
-  const userName = String(studentMSSV || "").trim();
-  if (!userName) {
-    return { ok: false, error: "Chưa biết mã sinh viên. Hãy mở web sinh viên một lần rồi thử lại." };
-  }
-
-  if (!force) {
-    const syncKey = `cookieSync_${userName}`;
-    const result = await chrome.storage.local.get(syncKey);
-    if (result[syncKey] && Date.now() - result[syncKey] < 30 * 60 * 1000) {
-      return { ok: true, skipped: true };
-    }
-  }
-
-  try {
-    const cookies = await chrome.cookies.getAll({ url: config.portalUrl, name: "ASC.AUTH" });
-    if (!cookies.length) {
-      return { ok: false, error: "Không tìm thấy cookie ASC.AUTH." };
-    }
-
-    const cookieStr = `ASC.AUTH=${cookies[0].value}`;
-    const url = `${cookieSync.workerUrl}?action=update-auth&user=${encodeURIComponent(userName)}`;
-
-    const res = await fetch(url, {
-      method: "POST",
-      body: cookieStr,
-      headers: { "Content-Type": "text/plain" },
-    });
-
-    if (!res.ok) {
-      return { ok: false, error: `Worker trả về ${res.status}: ${await res.text()}` };
-    }
-
-    await chrome.storage.local.set({ [`cookieSync_${userName}`]: Date.now() });
-    return { ok: true, count: cookies.length, response: await res.text() };
-  } catch (e) {
-    return { ok: false, error: e.message };
-  }
-}
 
 chrome.commands.onCommand.addListener((command, tab) => {
   if (command === "scan-qr") startQrScan(tab);

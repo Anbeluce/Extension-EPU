@@ -181,54 +181,6 @@ async function loadCookieList() {
 $("btn-load-cookies").addEventListener("click", loadCookieList);
 $("btn-add-cookie").addEventListener("click", () => $("cookie-list").prepend(createCookieItem()));
 
-// --- Đồng bộ Cookie ---
-
-const setSyncStatus = (text, isError = false) => {
-  $("sync-status").textContent = text;
-  $("sync-status").classList.toggle("error", isError);
-};
-
-async function loadSyncState() {
-  const config = await getConfig();
-  const { cookieSync } = config;
-  $("sync-toggle").checked = !!cookieSync?.enabled;
-  if (!cookieSync?.workerUrl) {
-    setSyncStatus("Chưa cấu hình. Vào Cài đặt để nhập Worker URL.", true);
-    return;
-  }
-  const { studentMSSV } = await chrome.storage.local.get("studentMSSV");
-  if (!studentMSSV) return;
-  const syncKey = `cookieSync_${studentMSSV}`;
-  const syncResult = await chrome.storage.local.get(syncKey);
-  if (syncResult[syncKey]) {
-    setSyncStatus("Lần sync gần nhất: " + new Date(syncResult[syncKey]).toLocaleString("vi-VN"));
-  }
-}
-
-$("sync-toggle").addEventListener("change", async () => {
-  const enabled = $("sync-toggle").checked;
-  const config = await getConfig();
-  if (enabled) {
-    const perm = await ensureOriginPermission(config.cookieSync?.workerUrl);
-    if (!perm.ok) {
-      $("sync-toggle").checked = false;
-      return setSyncStatus(perm.error === "Chưa nhập địa chỉ." ? "Chưa cấu hình. Vào Cài đặt để nhập Worker URL và MSSV." : perm.error, true);
-    }
-  }
-  config.cookieSync = { ...(config.cookieSync || {}), enabled };
-  await chrome.storage.sync.set({ config });
-  setSyncStatus(enabled ? "Đã bật đồng bộ." : "Đã tắt đồng bộ.");
-});
-
-$("btn-sync-now").addEventListener("click", async () => {
-  setSyncStatus("Đang đồng bộ...");
-  const res = await chrome.runtime.sendMessage({ type: "SYNC_COOKIES", force: true });
-  if (!res?.ok) return setSyncStatus(res?.error || "Lỗi đồng bộ.", true);
-  setSyncStatus(`Đã gửi ${res.count} cookie lên Worker.`);
-});
-
-$("btn-sync-settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
-
 // --- Lịch học ---
 
 const setCalStatus = (text, isError = false) => {
@@ -363,7 +315,6 @@ function compareVersions(a, b) {
   renderGreeting(studentName);
   showVersion();
   renderLinks();
-  loadSyncState();
   loadCalendarState();
   loadHideState();
   loadAutoSurveyState();
