@@ -6,6 +6,11 @@ import(chrome.runtime.getURL("local/private.js")).catch(() => {});
 
 const activeTab = async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
 
+// Mở trang Cài đặt, nhảy thẳng tới đúng mục (theo hash).
+function openSettings(section) {
+  chrome.tabs.create({ url: chrome.runtime.getURL("options/options.html") + (section ? "#" + section : "") });
+}
+
 function renderGreeting(name) {
   $("greeting").textContent = name ? `Xin chào, ${name}` : "EPU Extension";
 }
@@ -214,7 +219,7 @@ $("btn-cal-sync").addEventListener("click", async () => {
   await loadCalendarState();
 });
 
-$("btn-cal-settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
+$("btn-cal-settings").addEventListener("click", () => openSettings("sec-lich"));
 
 // --- Ẩn thông tin ---
 
@@ -235,7 +240,7 @@ $("hide-toggle").addEventListener("change", async () => {
   setHideStatus($("hide-toggle").checked ? "Đã bật. Tải lại trang để áp dụng." : "Đã tắt. Tải lại trang để áp dụng.");
 });
 
-$("btn-hide-settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
+$("btn-hide-settings").addEventListener("click", () => openSettings("sec-trang"));
 
 // --- Tự động khảo sát ---
 
@@ -259,7 +264,7 @@ $("autosurvey-toggle").addEventListener("change", async () => {
   if (on && !a.reviewed) {
     $("autosurvey-toggle").checked = false;
     setASStatus("Hãy cấu hình trước (điểm, nội dung góp ý) rồi bật lại.", true);
-    chrome.runtime.openOptionsPage();
+    openSettings("sec-khaosat");
     return;
   }
   config.autoSurvey = { ...a, enabled: on };
@@ -271,7 +276,7 @@ $("btn-autosurvey-run").addEventListener("click", () => {
   chrome.tabs.create({ url: chrome.runtime.getURL("tools/auto-survey.html") });
 });
 
-$("btn-autosurvey-settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
+$("btn-autosurvey-settings").addEventListener("click", () => openSettings("sec-khaosat"));
 
 // --- Version check ---
 

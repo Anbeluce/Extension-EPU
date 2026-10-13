@@ -230,11 +230,16 @@ function initNav() {
   const links = [...document.querySelectorAll(".nav a[data-target]")];
   const panels = [...document.querySelectorAll(".panel")];
   const show = (id) => {
+    if (!panels.some((p) => p.id === id)) return;
     links.forEach((a) => a.classList.toggle("active", a.dataset.target === id));
     panels.forEach((p) => p.classList.toggle("active", p.id === id));
     window.scrollTo({ top: 0 });
   };
-  links.forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); show(a.dataset.target); }));
+  links.forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); location.hash = a.dataset.target; show(a.dataset.target); }));
+  // Mở đúng mục khi được dẫn tới từ popup (vd options.html#sec-lich).
+  const fromHash = location.hash.slice(1);
+  if (fromHash) show(fromHash);
+  window.addEventListener("hashchange", () => show(location.hash.slice(1)));
 }
 
 initNav();
