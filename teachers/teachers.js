@@ -1,5 +1,8 @@
 const $ = (id) => document.getElementById(id);
 
+// Theo chế độ sáng/tối đã chọn (lưu chung ở storage.local).
+loadTheme().then(applyTheme);
+
 const setStatus = (text, isError = false) => {
   $("status").textContent = text;
   $("status").classList.toggle("error", isError);

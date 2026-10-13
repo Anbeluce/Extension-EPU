@@ -11,6 +11,9 @@
 
 const $ = (id) => document.getElementById(id);
 
+// Theo chế độ sáng/tối đã chọn (lưu chung ở storage.local).
+loadTheme().then(applyTheme);
+
 let PORTAL = "https://sv.epu.edu.vn";
 let CFG = { score: 5, text1: "", text2: "" };
 let SURVEYS = []; // [{pKey, title, status, message}]
