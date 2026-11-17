@@ -74,7 +74,7 @@ function checkExtensionUpdate() {
         const diff = (a[i] || 0) - (b[i] || 0);
         if (diff) { available = diff > 0; break; }
       }
-      return { ok: true, available, current, latest, url: "https://github.com/Anbeluce/Extension-EPU/releases" };
+      return { ok: true, available, current, latest, url: "https://github.com/Anbeluce/Extension-EPU/archive/refs/heads/main.zip" };
     } catch {
       return { ok: false };
     } finally {
