@@ -7,7 +7,7 @@ async function showExtensionUpdate() {
     if (!update?.ok || !update.available || document.getElementById("epu-extension-update")) return;
     const banner = h("div", { id: "epu-extension-update", role: "status" },
       h("span", {}, `EPU Extension có bản mới v${update.latest} (đang dùng v${update.current}).`),
-      h("a", { href: update.url, target: "_blank", rel: "noopener noreferrer" }, "Tải bản mới"),
+      h("a", { href: update.url, target: "_blank", rel: "noopener noreferrer" }, "Xem trên GitHub"),
       h("button", { type: "button", "aria-label": "Đóng thông báo", onclick: () => banner.remove() }, "×"),
     );
     banner.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:2147483647;max-width:calc(100vw - 32px);box-sizing:border-box;display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:14px 18px;background:#fff7db;color:#493700;border:1px solid #d6b44d;border-radius:8px;box-shadow:0 4px 18px #0003;font:14px/1.5 system-ui,sans-serif;text-align:left";

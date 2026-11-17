@@ -18,7 +18,7 @@ test('update check compares numeric versions and rejects invalid metadata', asyn
     const context = setup(async () => Response.json({ version }));
     const result = await context.checkExtensionUpdate();
     assert.equal(result.available, available);
-    assert.equal(result.url, 'https://github.com/Anbeluce/Extension-EPU/archive/refs/heads/main.zip');
+    assert.equal(result.url, 'https://github.com/Anbeluce/Extension-EPU');
   }
   const invalid = setup(async () => Response.json({ version: '<script>' }));
   assert.equal((await invalid.checkExtensionUpdate()).ok, false);
