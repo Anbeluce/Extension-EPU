@@ -123,6 +123,17 @@ function calendarRange(cal, today = new Date()) {
   return { start, end, startIso: isoDate(start), endIso: isoDate(end) };
 }
 
+// Khi đồng bộ chỉ quét phần còn lại của khoảng đã cấu hình.
+// Giữ nguyên ngày kết thúc, kể cả mốc mặc định tính từ ngày bắt đầu.
+function calendarSyncRange(cal, today = new Date()) {
+  const range = calendarRange(cal, today);
+  if (range.error) return range;
+  const current = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (current > range.end) return { ...range, expired: true };
+  if (current > range.start) return { ...range, start: current, startIso: isoDate(current) };
+  return range;
+}
+
 const DISCORD_WEBHOOK_RE =
   /^https:\/\/(?:(?:canary|ptb)\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+\/?(?:\?[\w=&%.-]*)?$/;
 const isDiscordWebhook = (url) => DISCORD_WEBHOOK_RE.test(String(url || "").trim());

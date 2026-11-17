@@ -130,11 +130,14 @@ function validate(body) {
         typeof e.endTime !== "string" || !validTime(e.endTime) || !clean(e.title, 200)) {
       return { error: `Buổi học thứ ${i + 1} không hợp lệ.` };
     }
+    const rawTitle = clean(e.title, 200);
+    const isExam = e.type === "exam" || rawTitle.startsWith("[THI] ");
     events.push({
+      type: isExam ? "exam" : "class",
       date: e.date,
       startTime: e.startTime.padStart(5, "0"),
       endTime: e.endTime.padStart(5, "0"),
-      title: clean(e.title, 200),
+      title: isExam && !rawTitle.startsWith("[THI] ") ? `[THI] ${rawTitle}` : rawTitle,
       room: clean(e.room, 100) || "Chưa rõ",
       teacher: clean(e.teacher, 100) || "Chưa rõ",
     });
@@ -203,6 +206,7 @@ function buildICS(id, events, updatedAt) {
   ];
   for (const e of events) {
     const [d, mo, y] = e.date.split("/");
+    const isExam = e.type === "exam" || e.title.startsWith("[THI] ");
     lines.push(
       "BEGIN:VEVENT",
       `UID:epu-${id}-${y}${mo}${d}-${e.startTime.replace(":", "")}-${hash6(e.title)}@epu-calendar`,
@@ -211,7 +215,7 @@ function buildICS(id, events, updatedAt) {
       `DTEND:${stamp(utcMs(e.date, e.endTime))}`,
       `SUMMARY:${escapeText(e.title)}`,
       `LOCATION:${escapeText(e.room)}`,
-      `DESCRIPTION:${escapeText(`Giảng viên: ${e.teacher}`)}`,
+      `DESCRIPTION:${escapeText(isExam ? "Lịch thi." : `Giảng viên: ${e.teacher}`)}`,
       "END:VEVENT",
     );
   }

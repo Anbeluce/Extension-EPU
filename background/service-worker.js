@@ -1,6 +1,10 @@
 try { importScripts("/config.js", "/background/webhook.js", "/background/calendar-sync.js"); } catch {}
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.type === "CHECK_UPDATE") {
+    checkExtensionUpdate().then(sendResponse);
+    return true;
+  }
   if (msg.type === "TEST_WEBHOOK") {
     sendTestWebhook().then(sendResponse);
     return true;
@@ -46,6 +50,39 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
   }
 });
+
+// Dùng chung nguồn phiên bản cho popup và banner trên trang sinh viên.
+// Gộp các yêu cầu đồng thời khi người dùng mở nhiều tab.
+let updateCheck = null;
+function checkExtensionUpdate() {
+  if (updateCheck) return updateCheck;
+  updateCheck = (async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch("https://raw.githubusercontent.com/Anbeluce/Extension-EPU/main/manifest.json", {
+        cache: "no-store", signal: controller.signal,
+      });
+      if (!res.ok) return { ok: false };
+      const { version: latest } = await res.json();
+      if (typeof latest !== "string" || !/^\d+(?:\.\d+){0,3}$/.test(latest)) return { ok: false };
+      const current = chrome.runtime.getManifest().version;
+      const a = latest.split(".").map(Number);
+      const b = current.split(".").map(Number);
+      let available = false;
+      for (let i = 0; i < Math.max(a.length, b.length); i++) {
+        const diff = (a[i] || 0) - (b[i] || 0);
+        if (diff) { available = diff > 0; break; }
+      }
+      return { ok: true, available, current, latest, url: "https://github.com/Anbeluce/Extension-EPU/releases" };
+    } catch {
+      return { ok: false };
+    } finally {
+      clearTimeout(timeout);
+    }
+  })().finally(() => { updateCheck = null; });
+  return updateCheck;
+}
 
 chrome.commands.onCommand.addListener((command, tab) => {
   if (command === "scan-qr") startQrScan(tab);

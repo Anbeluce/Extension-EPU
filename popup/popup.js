@@ -308,31 +308,14 @@ function showVersion() {
 }
 
 async function checkForUpdate() {
-  const current = chrome.runtime.getManifest().version;
   try {
-    const res = await fetch(
-      "https://raw.githubusercontent.com/Anbeluce/Extension-EPU/main/manifest.json",
-      { cache: "no-store" }
-    );
-    if (!res.ok) return;
-    const remote = await res.json();
-    const latest = remote.version;
-    if (latest && compareVersions(latest, current) > 0) {
-      $("update-text").textContent = `Có phiên bản mới: v${latest}`;
-      $("update-link").href = "https://github.com/Anbeluce/Extension-EPU/releases";
+    const update = await chrome.runtime.sendMessage({ type: "CHECK_UPDATE" });
+    if (update?.ok && update.available) {
+      $("update-text").textContent = `Có phiên bản mới: v${update.latest}`;
+      $("update-link").href = update.url;
       $("update-bar").style.display = "block";
     }
   } catch {}
-}
-
-function compareVersions(a, b) {
-  const pa = a.split(".").map(Number);
-  const pb = b.split(".").map(Number);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const diff = (pa[i] || 0) - (pb[i] || 0);
-    if (diff !== 0) return diff;
-  }
-  return 0;
 }
 
 // --- Khởi tạo ---

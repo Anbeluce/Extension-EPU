@@ -4,6 +4,8 @@
 
 const CALENDAR_PATH = "/SinhVien/GetDanhSachLichTheoTuan";
 const CALENDAR_DELAY_MS = 700;
+// Tăng khi cách thu thập thay đổi để không dùng lại cache của bộ đọc cũ.
+const CALENDAR_DATA_VERSION = 2;
 
 // Lỗi tạm thời (mất mạng, server lỗi) thì tự thử lại, chờ lâu dần; từ lần thứ 5 trở đi cứ 60 phút một lần.
 // Mỗi ngày thử lại tối đa CALENDAR_MAX_RETRIES lần, quá thì đợi lần mở trình duyệt/vào web sinh viên tiếp theo.
@@ -20,57 +22,199 @@ const calDayKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${
 const calFormat = (d) =>
   `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 
-function calDecode(s) {
-  if (!s) return "";
-  return s
-    .replace(/<[^>]*>/g, "")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n))
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&nbsp;/g, " ")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/\s+/g, " ")
-    .trim();
+// Đọc cả lịch học và lịch thi theo cấu trúc bảng tuần của EPU.
+function normalizeTime(time) {
+  const [hours, minutes] = time.split(":").map(Number);
+
+  if (
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes) ||
+    hours < 0 || hours > 23 ||
+    minutes < 0 || minutes > 59
+  ) {
+    throw new Error(`Giờ không hợp lệ: ${time}`);
+  }
+
+  return (
+    String(hours).padStart(2, "0") + ":" +
+    String(minutes).padStart(2, "0")
+  );
 }
 
-// Service worker không có DOMParser nên đọc bảng lịch tuần bằng regex.
-function parseCalendarHtml(html) {
-  const events = [];
-  const dates = [];
-  const thead = html.match(/<thead[\s\S]*?<\/thead>/);
-  const tbody = html.match(/<tbody[\s\S]*?<\/tbody>/);
-  if (!thead || !tbody) return { events, dates };
+function decodeHtmlEntities(str) {
+  if (!str) return "Chưa rõ";
 
-  for (const m of thead[0].matchAll(/<th>(?:(?!<\/th>)[\s\S])*?<br>\s*(\d{2}\/\d{2}\/\d{4})\s*<\/th>/g)) dates.push(m[1]);
+  const named = {
+    amp: "&",
+    lt: "<",
+    gt: ">",
+    quot: '"',
+    apos: "'",
+    nbsp: " ",
+  };
 
-  for (const tr of tbody[0].matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)) {
-    let col = -1; // cột 0 là nhãn "Sáng/Chiều"
-    for (const td of tr[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)) {
-      if (col >= 0 && col < dates.length && td[1].includes("color-lichhoc")) {
-        // Một ô có thể chứa nhiều môn, mỗi môn là một khối color-lichhoc.
-        for (const block of td[1].split(/(?=<div[^>]*color-lichhoc)/)) {
-          if (!block.includes("color-lichhoc")) continue;
-          const title = block.match(/<a[^>]*>([\s\S]*?)<\/a>/);
-          const time = block.match(/Giờ<\/span>:\s*(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
-          const room = block.match(/Phòng<\/span>:\s*<font>([\s\S]*?)<\/font>/);
-          const teacher = block.match(/GV<\/span>:\s*<font>([\s\S]*?)<\/font>/);
-          if (!title || !time) continue;
-          events.push({
-            date: dates[col],
-            title: calDecode(title[1]),
-            startTime: time[1].padStart(5, "0"),
-            endTime: time[2].padStart(5, "0"),
-            room: calDecode(room?.[1]) || "Chưa rõ",
-            teacher: calDecode(teacher?.[1]) || "Chưa rõ",
-          });
-        }
-      }
-      col++;
+  return str.replace(
+    /&#(x[0-9a-f]+|\d+);|&(amp|lt|gt|quot|apos|nbsp);/gi,
+    (match, numeric, name) => {
+      if (name) return named[name.toLowerCase()];
+
+      const value = numeric[0].toLowerCase() === "x"
+        ? parseInt(numeric.slice(1), 16)
+        : parseInt(numeric, 10);
+
+      return value >= 0 && value <= 0x10FFFF
+        ? String.fromCodePoint(value)
+        : match;
+    }
+  ).trim();
+}
+
+function htmlText(value) {
+  return decodeHtmlEntities(value.replace(/<[^>]*>/g, ""));
+}
+
+function getAttribute(attributes, name) {
+  const regex = new RegExp(
+    `(?:^|\\s)${name}\\s*=\\s*(["'])([\\s\\S]*?)\\1`,
+    "i"
+  );
+
+  return attributes.match(regex)?.[2] || "";
+}
+
+function extractEventBlocks(cellHtml) {
+  const starts = [];
+
+  for (const match of cellHtml.matchAll(/<div\b([^>]*)>/gi)) {
+    const classes = getAttribute(match[1], "class")
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (classes.includes("content")) {
+      starts.push({
+        index: match.index,
+        bodyStart: match.index + match[0].length,
+        classes,
+      });
     }
   }
-  return { events, dates };
+
+  return starts.map((item, index) => ({
+    classes: item.classes,
+    html: cellHtml.slice(
+      item.bodyStart,
+      starts[index + 1]?.index ?? cellHtml.length
+    ),
+  }));
+}
+
+function parseCalendarHtml(html) {
+  const events = [];
+  const scrapedDates = [];
+
+  const thead = html.match(
+    /<thead\b[^>]*>([\s\S]*?)<\/thead>/i
+  );
+  const tbody = html.match(
+    /<tbody\b[^>]*>([\s\S]*?)<\/tbody>/i
+  );
+
+  if (!thead || !tbody) {
+    throw new Error("Không đọc được cấu trúc bảng lịch.");
+  }
+
+  for (const match of thead[1].matchAll(
+    /<th\b[^>]*>([\s\S]*?)<\/th>/gi
+  )) {
+    const date = match[1].match(/\b\d{2}\/\d{2}\/\d{4}\b/);
+    if (date) scrapedDates.push(date[0]);
+  }
+
+  if (scrapedDates.length !== 7) {
+    throw new Error("Không đọc đủ 7 ngày trong bảng lịch tuần.");
+  }
+
+  const rows = [...tbody[1].matchAll(
+    /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi
+  )];
+
+  if (!rows.length) {
+    throw new Error("Không đọc được các hàng trong bảng lịch.");
+  }
+
+  for (const row of rows) {
+    const cells = [...row[1].matchAll(
+      /<td\b[^>]*>([\s\S]*?)<\/td>/gi
+    )];
+
+    if (cells.length !== 8) {
+      throw new Error("Cấu trúc cột lịch đã thay đổi.");
+    }
+
+    // Cột đầu tiên là Sáng / Chiều / Tối.
+    for (let column = 1; column < cells.length; column++) {
+      const date = scrapedDates[column - 1];
+      const blocks = extractEventBlocks(cells[column][1]);
+
+      for (const block of blocks) {
+        const titleMatch = block.html.match(
+          /<b\b[^>]*>\s*<a\b([^>]*)>([\s\S]*?)<\/a>/i
+        );
+
+        if (!titleMatch) {
+          throw new Error(`Không đọc được tên môn ngày ${date}.`);
+        }
+
+        const href = getAttribute(titleMatch[1], "href").trim();
+        const isClass = block.classes.includes("color-lichhoc");
+
+        // html/lich-thi.html: buổi thi có thể chỉ mang class "content text-start",
+        // không có color-lichthi và không có GV; link tên môn là href="javascript:".
+        const isExam =
+          block.classes.some(value =>
+            value === "color-lichthi" ||
+            value.startsWith("color-lichthi-")
+          ) ||
+          (!isClass && /^javascript:\s*$/i.test(href));
+
+        if (!isClass && !isExam) {
+          throw new Error(
+            `Gặp loại sự kiện chưa nhận diện được ngày ${date}.`
+          );
+        }
+
+        const timeMatch = block.html.match(
+          /Giờ\s*<\/span>\s*:\s*(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/i
+        );
+
+        const roomMatch = block.html.match(
+          /Phòng\s*<\/span>\s*:\s*<font\b[^>]*>([\s\S]*?)<\/font>/i
+        );
+
+        const teacherMatch = block.html.match(
+          /GV\s*<\/span>\s*:\s*<font\b[^>]*>([\s\S]*?)<\/font>/i
+        );
+
+        if (!timeMatch) {
+          throw new Error(`Không đọc được giờ môn học ngày ${date}.`);
+        }
+
+        events.push({
+          date,
+          type: isExam ? "exam" : "class",
+          title: (isExam ? "[THI] " : "") + htmlText(titleMatch[2]),
+          startTime: normalizeTime(timeMatch[1]),
+          endTime: normalizeTime(timeMatch[2]),
+          room: roomMatch ? htmlText(roomMatch[1]) : "Chưa rõ",
+          teacher: teacherMatch
+            ? htmlText(teacherMatch[1])
+            : "Chưa rõ",
+        });
+      }
+    }
+  }
+
+  return { events, dates: scrapedDates };
 }
 
 async function calFetchWeek(portalUrl, dateStr) {
@@ -113,6 +257,7 @@ async function calScrape(portalUrl, range, mssv, day) {
     weeks++;
   }
   return {
+    version: CALENDAR_DATA_VERSION,
     mssv, day, range: `${range.startIso}|${range.endIso}`, fetchedAt: Date.now(), weeks,
     dates: [...dates], events: [...events.values()], uploaded: false,
   };
@@ -181,8 +326,13 @@ async function runCalendarSync(force) {
   if (!(await chrome.permissions.contains({ origins: [new URL(cal.workerUrl).origin + "/*"] }))) {
     return calSetStatus(false, "Chưa cấp quyền truy cập Worker lịch. Vào Cài đặt và bấm Lưu để cấp quyền.");
   }
-  const range = calendarRange(cal);
+  const range = calendarSyncRange(cal);
   if (range.error) return calSetStatus(false, range.error);
+  if (range.expired) {
+    await calStopRetry();
+    const result = await calSetStatus(true, "Đã qua ngày kết thúc, không cần quét thêm lịch.");
+    return { ...result, skipped: true };
+  }
 
   const { studentMSSV } = await chrome.storage.local.get("studentMSSV");
   const today = calDayKey();
@@ -197,15 +347,16 @@ async function runCalendarSync(force) {
   const kAt = `cal_at_${mssv}`;
   const stored = await chrome.storage.local.get([kDay, kData, kEvents]);
 
-  if (!force && stored[kDay] === today) {
+  const rangeKey = `${range.startIso}|${range.endIso}`;
+  const currentData = stored[kData]?.version === CALENDAR_DATA_VERSION && stored[kData]?.range === rangeKey;
+  if (!force && stored[kDay] === today && currentData) {
     await calStopRetry();
     return { ok: true, skipped: true };
   }
 
   try {
     let data = stored[kData];
-    const rangeKey = `${range.startIso}|${range.endIso}`;
-    const reusable = !force && data && !data.uploaded && data.day === today && data.mssv === mssv && data.range === rangeKey;
+    const reusable = !force && currentData && data && !data.uploaded && data.day === today && data.mssv === mssv;
     if (!reusable) {
       data = await calScrape(config.portalUrl, range, mssv, today);
       await chrome.storage.local.set({ [kData]: data });
@@ -223,7 +374,8 @@ async function runCalendarSync(force) {
     await calStopRetry();
     await chrome.storage.local.remove(kRetry);
 
-    const summary = `${data.events.length} buổi học (${data.weeks} tuần, từ ${calFormat(range.start)} đến ${calFormat(range.end)}).`;
+    const examCount = data.events.filter((e) => e.type === "exam").length;
+    const summary = `${data.events.length - examCount} buổi học, ${examCount} buổi thi (${data.weeks} tuần, từ ${calFormat(range.start)} đến ${calFormat(range.end)}).`;
     await notifySyncSuccess({ diff, summary }).catch(() => {});
     return calSetStatus(true, `Đã gửi ${summary}`, mssv);
   } catch (e) {
